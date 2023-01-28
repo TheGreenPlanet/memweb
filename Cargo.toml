@@ -8,3 +8,5 @@ crate-type = ["cdylib"]
 name = "libmemwebservice"
 
 [dependencies]
+errno = "0.2.8"
+libc = "0.2.139"
