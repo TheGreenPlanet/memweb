@@ -13,5 +13,5 @@ errno = "0.2.8"
 futures-util = "0.3.25"
 libc = "0.2.139"
 log = "0.4.17"
-tokio = "1.25.0"
+tokio = {version = "1.25.0", features = ["full"]}
 tokio-tungstenite = "0.18.0"
