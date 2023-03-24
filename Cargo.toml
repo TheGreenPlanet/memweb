@@ -1,6 +1,7 @@
 [package]
 name = "memweb-service"
 version = "0.1.0"
+authors = ["TheGreenPlanet"]
 edition = "2021"
 
 [lib]

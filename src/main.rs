@@ -2,7 +2,7 @@ use std::net::TcpListener;
 use std::thread::spawn;
 use tungstenite::{
     accept_hdr,
-    handshake::server::{Request, Response},
+    handshake::server::{Request, Response}, Message,
 };
 use std::env;
 
@@ -24,18 +24,20 @@ fn main() {
 
                 // Let's add an additional header to our response to the client.
                 let headers = response.headers_mut();
-                headers.append("MyCustomHeader", ":)".parse().unwrap());
+                headers.append("MemWebServiceHeader", ":)".parse().unwrap());
                 headers.append("SOME_TUNGSTENITE_HEADER", "header_value".parse().unwrap());
 
                 Ok(response)
             };
             let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
+            let session = ClientSession::new();
+
             loop {
                 let msg = websocket.read_message().unwrap();
 
                 // We do not want to send back ping/pong messages.
                 if msg.is_binary() || msg.is_text() {
-                    websocket.write_message(msg).unwrap();
+                    session.message_handler(&websocket, &msg);
                 }
             }
         });
