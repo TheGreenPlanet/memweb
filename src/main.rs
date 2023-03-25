@@ -6,6 +6,8 @@ use tungstenite::{
 };
 use std::env;
 
+mod parser;
+
 
 fn main() {
     let _ = env_logger::init();
@@ -29,15 +31,15 @@ fn main() {
 
                 Ok(response)
             };
-            let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
-            let session = ClientSession::new();
+            let websocket = accept_hdr(stream.unwrap(), callback).unwrap();
+            let mut session = parser::ClientSession::new(websocket);
 
             loop {
-                let msg = websocket.read_message().unwrap();
+                let msg = session.websocket().read_message().unwrap();
 
                 // We do not want to send back ping/pong messages.
                 if msg.is_binary() || msg.is_text() {
-                    session.message_handler(&websocket, &msg);
+                    session.message_handler(&msg);
                 }
             }
         });
