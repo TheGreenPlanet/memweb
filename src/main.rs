@@ -39,7 +39,7 @@ fn main() {
 
                 // We do not want to send back ping/pong messages.
                 if msg.is_binary() || msg.is_text() {
-                    session.message_handler(&msg);
+                    session.message_handler(msg);
                 }
             }
         });
