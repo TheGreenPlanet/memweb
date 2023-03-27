@@ -6,8 +6,7 @@ use tungstenite::{
 };
 use std::env;
 
-mod parser;
-
+mod session;
 
 fn main() {
     let _ = env_logger::init();
@@ -32,7 +31,7 @@ fn main() {
                 Ok(response)
             };
             let websocket = accept_hdr(stream.unwrap(), callback).unwrap();
-            let mut session = parser::ClientSession::new(websocket);
+            let mut session = session::ClientSession::new(websocket);
 
             loop {
                 let msg = session.websocket().read_message().unwrap();
