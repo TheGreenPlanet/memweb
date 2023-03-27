@@ -19,7 +19,15 @@ impl Memory {
         Memory { pid }
     }
 
+    pub fn pid(&mut self, pid: i32) {
+        self.pid = pid;
+    }
+
     pub fn read(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
+        if self.pid == -1 {
+            return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
+        }
+
         let mut result = vec![0; size];
         let local_iov = iovec { iov_base: result.as_mut_ptr() as *mut c_void, iov_len: size};
         let remote_iov = iovec { iov_base: address as *mut c_void, iov_len: size};
@@ -28,8 +36,7 @@ impl Memory {
 
         if bytes_read == -1 {
             let e = errno();
-            let error_string = format!("Error {}: {}", e.0, e);
-            return Err(io::Error::new(io::ErrorKind::Other, error_string));
+            return Err(io::Error::new(io::ErrorKind::Other, format!("Error {}: {}", e.0, e)));
         } else if bytes_read as usize != size {
             return Err(io::Error::new(io::ErrorKind::Other, "Partial read occurred!"));
         } else {
@@ -38,6 +45,10 @@ impl Memory {
     }
 
     pub fn write(&self, address: u64, buffer: &[u8]) -> io::Result<()> {
+        if self.pid == -1 {
+            return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
+        }
+        
         let size = buffer.len();
         let local_iov = iovec { iov_base: buffer.as_ptr() as *mut c_void, iov_len: size};
         let remote_iov = iovec { iov_base: address as *mut c_void, iov_len: size};
@@ -46,8 +57,7 @@ impl Memory {
 
         if bytes_written == -1 {
             let e = errno();
-            let error_string = format!("Error {}: {}", e.0, e);
-            return Err(io::Error::new(io::ErrorKind::Other, error_string));         
+            return Err(io::Error::new(io::ErrorKind::Other, format!("Error {}: {}", e.0, e)));         
         } else if bytes_written as usize != size {
             return Err(io::Error::new(io::ErrorKind::Other, "Partial write occurred!"));
         } else {
