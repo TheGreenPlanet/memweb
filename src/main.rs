@@ -7,6 +7,7 @@ use tungstenite::{
 use std::env;
 
 mod session;
+mod memory;
 
 fn main() {
     let _ = env_logger::init();
