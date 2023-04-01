@@ -4,9 +4,9 @@ version = "0.1.0"
 authors = ["TheGreenPlanet"]
 edition = "2021"
 
-[lib]
-crate-type = ["cdylib"]
-name = "libmemwebservice"
+[[bin]]
+name = "memweb"
+path = "src/main.rs"
 
 [dependencies]
 env_logger = "0.10.0"
