@@ -12,7 +12,6 @@ pub enum PacketType {
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-// #[deku(endian = "big")]
 pub struct C2SReadMemoryPacket {
     _type: PacketType,
     address: u64,
@@ -49,10 +48,25 @@ impl C2SReadMemoryPacket {
         let (_, value) = C2SReadMemoryPacket::from_bytes((data, 0)).unwrap();
         value
     }
-    
+
     pub fn out_bytes(_type: PacketType, address: u64) -> Vec<u8> {
         let mut data = vec![_type as u8];
         data.extend_from_slice(&address.to_be_bytes());
+        data
+    }
+}
+
+impl C2SWriteMemoryPacket {
+    pub fn parse(data: &[u8]) -> Self {
+        let (_, value) = C2SWriteMemoryPacket::from_bytes((data, 0)).unwrap();
+        value
+    }
+
+    pub fn out_bytes(_type: PacketType, address: u64, bytes: Vec<u8>) -> Vec<u8> {
+        let mut data = vec![_type as u8];
+        data.extend_from_slice(&address.to_be_bytes());
+        data.extend_from_slice(&bytes.len().to_be_bytes());
+        data.extend_from_slice(bytes.as_ref());
         data
     }
 }
@@ -62,7 +76,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_construct_read_memory_packet() {
+    fn test_read_memory_packet() {
         let data = C2SReadMemoryPacket::out_bytes(PacketType::Read, 1337);
         let packet = C2SReadMemoryPacket::parse(&data);
 
@@ -76,7 +90,18 @@ mod tests {
     }
 
     #[test]
-    fn test_construct_and_parse_packet() {
+    fn test_write_memory_packet() {
+        let data = C2SWriteMemoryPacket::out_bytes(PacketType::Read, 1337, vec![0x90, 0x00]);
+        let packet = C2SWriteMemoryPacket::parse(&data);
 
+        assert_eq!(
+            C2SWriteMemoryPacket {
+                _type: PacketType::Read,
+                address: 1337,
+                count: 2,
+                [0x90, 0x00],
+            },
+            packet
+        );
     }
 }
