@@ -44,13 +44,18 @@ pub struct C2STargetPidPacket {
 //     processes: Vec<(String, u32)>
 // }
 
-pub fn parse_read_memory_packet(data: &[u8]) {
-    let (rest, value) = C2SReadMemoryPacket::from_bytes((data, 1)).unwrap();
+impl C2SReadMemoryPacket {
+    pub fn parse(data: &[u8]) -> Self {
+        let (_, value) = C2SReadMemoryPacket::from_bytes((data, 0)).unwrap();
+        value
+    }
+    
+    pub fn out_bytes(_type: PacketType, address: u64) -> Vec<u8> {
+        let mut data = vec![_type as u8];
+        data.extend_from_slice(&address.to_be_bytes());
+        data
+    }
 }
-
-// pub fn write_packet() -> Vec<u8> {
-
-// }
 
 #[cfg(test)]
 mod tests {
@@ -58,20 +63,20 @@ mod tests {
 
     #[test]
     fn test_construct_read_memory_packet() {
-        let test_value: u64 = 1337;
-        let mut data = vec![0x00];
-        data.extend_from_slice(&test_value.to_be_bytes());
+        let data = C2SReadMemoryPacket::out_bytes(PacketType::Read, 1337);
+        let packet = C2SReadMemoryPacket::parse(&data);
 
-        let (_rest, mut val) = C2SReadMemoryPacket::from_bytes((data.as_ref(), 0)).unwrap();
         assert_eq!(
             C2SReadMemoryPacket {
                 _type: PacketType::Read,
                 address: 1337
             },
-            val
+            packet
         );
     }
 
     #[test]
-    fn test_construct_and_parse_packet() {}
+    fn test_construct_and_parse_packet() {
+
+    }
 }
