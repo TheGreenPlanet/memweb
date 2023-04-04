@@ -43,6 +43,18 @@ pub struct C2STargetPidPacket {
 //     processes: Vec<(String, u32)>
 // }
 
+impl C2STargetPidPacket {
+    pub fn parse(data: &[u8]) -> Self {
+        let (_, value) = C2STargetPidPacket::from_bytes((data, 0)).unwrap();
+        value
+    }
+
+    pub fn out_bytes(_type: PacketType, target_pid: u32) -> Vec<u8> {
+        let object = C2STargetPidPacket { _type, target_pid };
+        object.to_bytes().unwrap()
+    }
+}
+
 impl C2SReadMemoryPacket {
     pub fn parse(data: &[u8]) -> Self {
         let (_, value) = C2SReadMemoryPacket::from_bytes((data, 0)).unwrap();
@@ -87,15 +99,29 @@ mod tests {
 
     #[test]
     fn test_write_memory_packet() {
-        let data = C2SWriteMemoryPacket::out_bytes(PacketType::Read, 1337, vec![123, 255]);
+        let data = C2SWriteMemoryPacket::out_bytes(PacketType::Write, 1337, vec![123, 255]);
         let packet = C2SWriteMemoryPacket::parse(&data);
 
         assert_eq!(
             C2SWriteMemoryPacket {
-                _type: PacketType::Read,
+                _type: PacketType::Write,
                 address: 1337,
                 count: 2,
                 bytes: vec![123, 255],
+            },
+            packet
+        );
+    }
+
+    #[test]
+    fn test_target_pid_packet() {
+        let data = C2STargetPidPacket::out_bytes(PacketType::TargetPID, 1234567890);
+        let packet = C2STargetPidPacket::parse(&data);
+
+        assert_eq!(
+            C2STargetPidPacket {
+                _type: PacketType::TargetPID,
+                target_pid: 1234567890,
             },
             packet
         );
