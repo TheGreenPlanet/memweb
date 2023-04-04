@@ -1,11 +1,11 @@
+use crate::memory;
+use shared::protocol::*;
 use std::{io::Error, net::TcpStream};
 use tungstenite::{
     accept_hdr,
     handshake::server::{Request, Response},
     Message, WebSocket,
 };
-
-use crate::memory;
 
 enum ClientServerStateFlow {
     NewBorn,
@@ -21,27 +21,6 @@ pub struct ClientSession {
     memory: memory::Memory,
 }
 
-enum PacketType {
-    Read = 0,
-    Write = 1,
-    TargetPID = 2,
-    SendProcesses = 3,
-    Error = 4,
-}
-
-impl PacketType {
-    fn from_u8(value: u8) -> Option<Self> {
-        match value {
-            0 => Some(Self::Read),
-            1 => Some(Self::Write),
-            2 => Some(Self::TargetPID),
-            3 => Some(Self::SendProcesses),
-            4 => Some(Self::Error),
-            _ => None,
-        }
-    }
-}
-
 impl ClientSession {
     pub fn new(websocket: WebSocket<TcpStream>) -> Self {
         Self {
@@ -51,59 +30,55 @@ impl ClientSession {
         }
     }
 
+    fn error_response(&mut self, error: Error){
+        self.websocket
+            .write_message(Message::text(error.to_string()))
+            .unwrap();
+    }
+
     pub fn message_handler(&mut self, msg: Message) {
         if !valid_packet(&msg) {
             return;
         }
 
-        let data = msg.into_data();
-        match PacketType::from_u8(data[0]) {
+        let packet_data = msg.into_data();
+
+        match PacketType::from_u8(packet_data[0]) {
             Some(PacketType::Read) => {
                 println!("Read memory");
-                let address = u64::from_be_bytes([
-                    data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8],
-                ]);
-                let bytes = u64::from_be_bytes([
-                    data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16],
-                ]);
-                match self.memory.read(address, bytes as usize) {
-                    Ok(data) => {
+
+                let packet = C2SReadMemoryPacket::parse(&packet_data);
+                match self.memory.read(packet.address, packet.size) {
+                    Ok(result) => {
                         self.websocket
-                            .write_message(response_packet(PacketType::Read, data))
+                            .write_message(Message::Binary(C2SReadMemoryPacketResponse::out_bytes(
+                                result,
+                            )))
                             .unwrap();
-                        return;
                     }
-                    Err(error) => {
-                        self.websocket
-                            .write_message(response_packet_error(error))
-                            .unwrap();
-                        return;
-                    }
+                    Err(error) => self.error_response(error)
                 }
             }
             Some(PacketType::Write) => {
                 println!("Write memory");
-                let address = u64::from_be_bytes([
-                    data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8],
-                ]);
-                match self.memory.write(address, &data[2..]) {
-                    Ok(()) => {
+
+                let packet = C2SWriteMemoryPacket::parse(&packet_data);
+                match self.memory.write(packet.address, &packet.bytes) {
+                    Ok(result) => {
                         self.websocket
-                            .write_message(response_packet(PacketType::Write, data))
+                            .write_message(Message::Binary(
+                                C2SWriteMemoryPacketResponse::out_bytes(result),
+                            ))
                             .unwrap();
-                        return;
                     }
-                    Err(error) => {
-                        self.websocket
-                            .write_message(response_packet_error(error))
-                            .unwrap();
-                        return;
-                    }
+                    Err(error) => self.error_response(error)
                 }
             }
             Some(PacketType::TargetPID) => {
                 println!("Target PID");
-                self.set_target_pid(i32::from_le_bytes([data[1], data[2], data[3], data[4]]));
+
+                let packet = C2STargetPidPacket::parse(&packet_data);
+                self.set_target_pid(packet.target_pid as i32);
             }
             Some(PacketType::SendProcesses) => {
                 println!("Send Processes");
@@ -134,10 +109,6 @@ fn response_packet(_type: PacketType, data: Vec<u8>) -> Message {
     payload.insert(0, byte_to_add);
 
     Message::binary(payload)
-}
-
-fn response_packet_error(error: Error) -> Message {
-    Message::text(error.to_string())
 }
 
 #[cfg(test)]
