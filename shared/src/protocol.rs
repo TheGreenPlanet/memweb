@@ -24,7 +24,7 @@ pub struct C2SWriteMemoryPacket {
     address: u64,
     count: u32,
     #[deku(count = "count")]
-    data: Vec<u8>,
+    bytes: Vec<u8>,
 }
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
@@ -50,9 +50,8 @@ impl C2SReadMemoryPacket {
     }
 
     pub fn out_bytes(_type: PacketType, address: u64) -> Vec<u8> {
-        let mut data = vec![_type as u8];
-        data.extend_from_slice(&address.to_be_bytes());
-        data
+        let object = C2SReadMemoryPacket { _type, address };
+        object.to_bytes().unwrap()
     }
 }
 
@@ -63,11 +62,8 @@ impl C2SWriteMemoryPacket {
     }
 
     pub fn out_bytes(_type: PacketType, address: u64, bytes: Vec<u8>) -> Vec<u8> {
-        let mut data = vec![_type as u8];
-        data.extend_from_slice(&address.to_be_bytes());
-        data.extend_from_slice(&bytes.len().to_be_bytes());
-        data.extend_from_slice(bytes.as_ref());
-        data
+        let object = C2SWriteMemoryPacket { _type, address, count: bytes.len() as u32, bytes };
+        object.to_bytes().unwrap()
     }
 }
 
@@ -91,7 +87,7 @@ mod tests {
 
     #[test]
     fn test_write_memory_packet() {
-        let data = C2SWriteMemoryPacket::out_bytes(PacketType::Read, 1337, vec![0x90, 0x00]);
+        let data = C2SWriteMemoryPacket::out_bytes(PacketType::Read, 1337, vec![123, 255]);
         let packet = C2SWriteMemoryPacket::parse(&data);
 
         assert_eq!(
@@ -99,7 +95,7 @@ mod tests {
                 _type: PacketType::Read,
                 address: 1337,
                 count: 2,
-                [0x90, 0x00],
+                bytes: vec![123, 255],
             },
             packet
         );
