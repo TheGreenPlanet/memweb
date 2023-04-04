@@ -44,7 +44,7 @@ impl Memory {
         }
     }
 
-    pub fn write(&self, address: u64, buffer: &[u8]) -> io::Result<()> {
+    pub fn write(&self, address: u64, buffer: &[u8]) -> io::Result<usize> {
         if self.pid == -1 {
             return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
         }
@@ -61,7 +61,7 @@ impl Memory {
         } else if bytes_written as usize != size {
             return Err(io::Error::new(io::ErrorKind::Other, "Partial write occurred!"));
         } else {
-            Ok(())
+            Ok(bytes_written as usize)
         }
     }
 }
