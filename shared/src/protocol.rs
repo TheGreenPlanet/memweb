@@ -17,7 +17,7 @@ pub enum PacketType {
 pub struct C2SReadMemoryPacket {
     _type: PacketType,
     pub address: u64,
-    pub size: u64,
+    pub size: u32,
 }
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
@@ -111,7 +111,7 @@ impl C2SReadMemoryPacket {
         value
     }
 
-    pub fn out_bytes(address: u64, size: u64) -> Vec<u8> {
+    pub fn out_bytes(address: u64, size: u32) -> Vec<u8> {
         let object = C2SReadMemoryPacket {
             _type: PacketType::Read,
             address,
