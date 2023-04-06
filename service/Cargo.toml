@@ -15,3 +15,6 @@ libc = "0.2.139"
 log = "0.4.17"
 tungstenite = "0.18.0"
 shared = { version = "0.1.0", path = "../shared" }
+
+[features]
+fake_read_write = []

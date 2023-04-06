@@ -23,6 +23,7 @@ impl Memory {
         self.pid = pid;
     }
 
+    #[cfg(not(feature = "fake_read_write"))]
     pub fn read(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
         if self.pid == -1 {
             return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
@@ -44,6 +45,17 @@ impl Memory {
         }
     }
 
+    #[cfg(feature = "fake_read_write")]
+    pub fn read(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
+        if self.pid == -1 {
+            return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
+        }
+
+        let mut result = vec![1; size];
+        Ok(result)
+    }
+
+    #[cfg(not(feature = "fake_read_write"))]
     pub fn write(&self, address: u64, buffer: &[u8]) -> io::Result<usize> {
         if self.pid == -1 {
             return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
@@ -63,5 +75,14 @@ impl Memory {
         } else {
             Ok(bytes_written as usize)
         }
+    }
+
+    #[cfg(feature = "fake_read_write")]
+    pub fn write(&self, address: u64, buffer: &[u8]) -> io::Result<usize> {
+        if self.pid == -1 {
+            return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
+        }
+        println!("Fake write: address={}, bytes={:?}", address, buffer);
+        Ok(buffer.len())
     }
 }

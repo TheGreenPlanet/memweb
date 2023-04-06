@@ -41,9 +41,8 @@ impl ClientSession {
 
         match PacketType::from_u8(packet_data[0]) {
             Some(PacketType::Read) => {
-                println!("Read memory");
-
                 let packet = C2SReadMemoryPacket::parse(&packet_data);
+
                 match self.memory.read(packet.address, packet.size as usize) {
                     Ok(result) => {
                         self.websocket
@@ -56,9 +55,8 @@ impl ClientSession {
                 }
             }
             Some(PacketType::Write) => {
-                println!("Write memory");
-
                 let packet = C2SWriteMemoryPacket::parse(&packet_data);
+
                 match self.memory.write(packet.address, &packet.bytes) {
                     Ok(result) => {
                         self.websocket
@@ -71,9 +69,8 @@ impl ClientSession {
                 }
             }
             Some(PacketType::TargetPID) => {
-                println!("Target PID");
-
                 let packet = C2STargetPidPacket::parse(&packet_data);
+
                 self.set_target_pid(packet.target_pid);
             }
             Some(PacketType::SendProcesses) => {
@@ -87,7 +84,15 @@ impl ClientSession {
         &mut self.websocket
     }
 
+    #[cfg(not(feature = "fake_read_write"))]
     fn set_target_pid(&mut self, pid: i32) {
+        self.state = ClientServerStateFlow::TargetPID;
+        self.memory.pid(pid);
+    }
+
+    #[cfg(feature = "fake_read_write")]
+    fn set_target_pid(&mut self, pid: i32) {
+        println!("Target Pid: {}", pid);
         self.state = ClientServerStateFlow::TargetPID;
         self.memory.pid(pid);
     }
