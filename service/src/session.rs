@@ -30,17 +30,13 @@ impl ClientSession {
         }
     }
 
-    fn error_response(&mut self, error: Error){
+    fn error_response(&mut self, error: Error) {
         self.websocket
             .write_message(Message::text(error.to_string()))
             .unwrap();
     }
 
     pub fn message_handler(&mut self, msg: Message) {
-        if !valid_packet(&msg) {
-            return;
-        }
-
         let packet_data = msg.into_data();
 
         match PacketType::from_u8(packet_data[0]) {
@@ -51,12 +47,12 @@ impl ClientSession {
                 match self.memory.read(packet.address, packet.size) {
                     Ok(result) => {
                         self.websocket
-                            .write_message(Message::Binary(C2SReadMemoryPacketResponse::out_bytes(
+                            .write_message(Message::Binary(S2CReadMemoryPacketResponse::out_bytes(
                                 result,
                             )))
                             .unwrap();
                     }
-                    Err(error) => self.error_response(error)
+                    Err(error) => self.error_response(error),
                 }
             }
             Some(PacketType::Write) => {
@@ -67,11 +63,11 @@ impl ClientSession {
                     Ok(result) => {
                         self.websocket
                             .write_message(Message::Binary(
-                                C2SWriteMemoryPacketResponse::out_bytes(result),
+                                S2CWriteMemoryPacketResponse::out_bytes(result),
                             ))
                             .unwrap();
                     }
-                    Err(error) => self.error_response(error)
+                    Err(error) => self.error_response(error),
                 }
             }
             Some(PacketType::TargetPID) => {
@@ -94,37 +90,5 @@ impl ClientSession {
     fn set_target_pid(&mut self, pid: i32) {
         self.state = ClientServerStateFlow::TargetPID;
         self.memory.pid(pid);
-    }
-}
-
-fn valid_packet(msg: &Message) -> bool {
-    const MIN_PACKET_LEN: usize = 1 + 8 + 1;
-    return msg.len() >= MIN_PACKET_LEN;
-}
-
-fn response_packet(_type: PacketType, data: Vec<u8>) -> Message {
-    // TODO: avoid copy
-    let mut payload = data.clone();
-    let byte_to_add = 0;
-    payload.insert(0, byte_to_add);
-
-    Message::binary(payload)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_valid_packet() {
-        // create a message with a size of 9
-        let short_msg = Message::binary(vec![0; 9]);
-        assert_eq!(valid_packet(&short_msg), false);
-
-        let edge_msg = Message::binary(vec![0; 10]);
-        assert_eq!(valid_packet(&edge_msg), true);
-
-        let large_msg = Message::binary(vec![0; 100]);
-        assert_eq!(valid_packet(&large_msg), true);
     }
 }
