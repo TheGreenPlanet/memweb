@@ -1,6 +1,6 @@
 use deku::prelude::*;
 
-type Pid = u32;
+type Pid = i32;
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(type = "u8")]

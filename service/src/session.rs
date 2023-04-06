@@ -74,7 +74,7 @@ impl ClientSession {
                 println!("Target PID");
 
                 let packet = C2STargetPidPacket::parse(&packet_data);
-                self.set_target_pid(packet.target_pid as i32);
+                self.set_target_pid(packet.target_pid);
             }
             Some(PacketType::SendProcesses) => {
                 println!("Send Processes");
