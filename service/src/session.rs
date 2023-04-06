@@ -44,7 +44,7 @@ impl ClientSession {
                 println!("Read memory");
 
                 let packet = C2SReadMemoryPacket::parse(&packet_data);
-                match self.memory.read(packet.address, packet.size) {
+                match self.memory.read(packet.address, packet.size as usize) {
                     Ok(result) => {
                         self.websocket
                             .write_message(Message::Binary(S2CReadMemoryPacketResponse::out_bytes(
@@ -63,7 +63,7 @@ impl ClientSession {
                     Ok(result) => {
                         self.websocket
                             .write_message(Message::Binary(
-                                S2CWriteMemoryPacketResponse::out_bytes(result),
+                                S2CWriteMemoryPacketResponse::out_bytes(result as u64),
                             ))
                             .unwrap();
                     }

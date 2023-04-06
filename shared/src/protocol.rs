@@ -68,7 +68,7 @@ pub struct S2CReadMemoryPacketResponse {
 #[deku(endian = "big")]
 pub struct S2CWriteMemoryPacketResponse {
     _type: PacketType,
-    pub bytes_written: u32,
+    pub bytes_written: u64,
 }
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
@@ -159,7 +159,7 @@ impl S2CWriteMemoryPacketResponse {
         let (_, value) = S2CWriteMemoryPacketResponse::from_bytes((data, 0)).unwrap();
         value
     }
-    pub fn out_bytes(bytes_written: u32) -> Vec<u8> {
+    pub fn out_bytes(bytes_written: u64) -> Vec<u8> {
         let object = S2CWriteMemoryPacketResponse {
             _type: PacketType::Write,
             bytes_written,
@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn test_write_memory_packet_response() {
-        const BYTES_WRITTEN: u32 = 100;
+        const BYTES_WRITTEN: u64 = 100;
         let response_data = S2CWriteMemoryPacketResponse::out_bytes(BYTES_WRITTEN);
         let parsed_response = S2CWriteMemoryPacketResponse::parse(&response_data);
 
