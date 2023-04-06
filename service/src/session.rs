@@ -53,7 +53,7 @@ impl ClientSession {
                     }
                     Err(error) => self.error_response(error),
                 }
-            }
+            },
             Some(PacketType::Write) => {
                 let packet = C2SWriteMemoryPacket::parse(&packet_data);
 
@@ -67,15 +67,15 @@ impl ClientSession {
                     }
                     Err(error) => self.error_response(error),
                 }
-            }
+            },
             Some(PacketType::TargetPID) => {
                 let packet = C2STargetPidPacket::parse(&packet_data);
 
                 self.set_target_pid(packet.target_pid);
-            }
+            },
             Some(PacketType::SendProcesses) => {
                 println!("Send Processes");
-            }
+            },
             _ => println!("Unknown packet type"),
         };
     }
