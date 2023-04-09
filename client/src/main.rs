@@ -9,9 +9,9 @@ fn main() -> eframe::Result<()> {
 
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
-        "eframe template",
+        "Memweb",
         native_options,
-        Box::new(|cc| Box::new(memweb::TemplateApp::new(cc))),
+        Box::new(|cc| Box::new(memweb::MemWebApp::new(cc))),
     )
 }
 
@@ -30,7 +30,7 @@ fn main() {
         eframe::start_web(
             "the_canvas_id", // hardcode it
             web_options,
-            Box::new(|cc| Box::new(memweb::TemplateApp::new(cc))),
+            Box::new(|cc| Box::new(memweb::MemWebApp::new(cc))),
         )
         .await
         .expect("failed to start eframe");
