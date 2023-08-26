@@ -1,4 +1,6 @@
+#![allow(non_snake_case)]
 use deku::prelude::*;
+
 
 type Pid = i32;
 
@@ -37,23 +39,25 @@ pub struct C2STargetPidPacket {
     pub target_pid: Pid,
 }
 
-// #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
-// #[deku(endian = "big")]
-// pub struct EncodedString {
-//     length: u32,
-//     #[deku(count = "length")]
-//     string: Vec<u8>,
-// }
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
+pub struct EncodedProcess {
+    pub length: u32,
+    #[deku(count = "length")]
+    pub name: Vec<u8>,
+    pub pid: Pid,
+}
 
-// #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
-// #[deku(endian = "big")]
-// pub struct S2CSendProcessesPacket {
-//     _type: PacketType,
-//     #[deku(update = "self.processes.len() as u32")]
-//     count: u32,
-//     #[deku(count = "count")]
-//     processes: Vec<(EncodedString, u32)>
-// }
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "big")]
+pub struct S2CSendProcessesPacket {
+    _type: PacketType,
+    #[deku(update = "self.processes.len() as u32")]
+    pub count: u32,
+    #[deku(count = "count")]
+    pub processes: Vec<EncodedProcess>,
+}
+
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
@@ -72,10 +76,21 @@ pub struct S2CWriteMemoryPacketResponse {
 }
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
+pub struct EncodedString {
+    pub length: u32,
+    #[deku(count = "length")]
+    pub string: Vec<u8>,
+}
+
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-pub struct S2CTargetPidPacketResponse {
+pub struct S2CTargetPidRegionsPacket {
     _type: PacketType,
-    pub success: bool,
+    #[deku(update = "self.regions.len() as u32")]
+    pub count: u32,
+    #[deku(count = "count")]
+    pub regions: Vec<EncodedString>,
 }
 
 impl PacketType {
@@ -89,6 +104,16 @@ impl PacketType {
         }
     }
 }
+
+// impl EncodedString {
+//     pub fn out_bytes(string: String) -> Vec<u8> {
+//         let object = EncodedString {
+//             length: string.len() as u32,
+//             string: string.into_bytes(),
+//         };
+//         object.to_bytes().unwrap()
+//     }
+// }
 
 impl C2STargetPidPacket {
     pub fn parse(data: &[u8]) -> Self {
@@ -168,15 +193,24 @@ impl S2CWriteMemoryPacketResponse {
     }
 }
 
-impl S2CTargetPidPacketResponse {
+impl S2CTargetPidRegionsPacket {
     pub fn parse(data: &[u8]) -> Self {
-        let (_, value) = S2CTargetPidPacketResponse::from_bytes((data, 0)).unwrap();
+        let (_, value) = S2CTargetPidRegionsPacket::from_bytes((data, 0)).unwrap();
         value
     }
-    pub fn out_bytes(success: bool) -> Vec<u8> {
-        let object = S2CTargetPidPacketResponse {
+    pub fn out_bytes(regions: Vec<String>) -> Vec<u8> {
+
+        let encoded_regions: Vec<EncodedString> = regions.iter().map(|s| {
+            EncodedString {
+                length: s.len() as u32,
+                string: s.as_bytes().to_vec(),
+            }
+        }).collect();
+
+        let object = S2CTargetPidRegionsPacket {
             _type: PacketType::TargetPID,
-            success,
+            count: encoded_regions.len() as u32,
+            regions: encoded_regions,
         };
         object.to_bytes().unwrap()
     }
@@ -276,15 +310,31 @@ mod tests {
     }
 
     #[test]
-    fn test_target_pid_packet_response() {
-        const SUCCESS: bool = true;
-        let response_data = S2CTargetPidPacketResponse::out_bytes(SUCCESS);
-        let parsed_response = S2CTargetPidPacketResponse::parse(&response_data);
+    fn test_target_pid_regions() {
+        const REGION_NAMES: [&str; 2] = [
+            "/usr/lib64/libc-2.32.so",
+            "/usr/lib64/libdl-2.32.so",
+            ];
+        
+        let owned_region_names: Vec<String> = REGION_NAMES.iter().map(|s| s.to_string()).collect();
+
+        let region_names_data = S2CTargetPidRegionsPacket::out_bytes(owned_region_names);
+        let parsed_response = S2CTargetPidRegionsPacket::parse(&region_names_data);
 
         assert_eq!(
-            S2CTargetPidPacketResponse {
+            S2CTargetPidRegionsPacket {
                 _type: PacketType::TargetPID,
-                success: true,
+                count: REGION_NAMES.len() as u32,
+                regions: vec![
+                    EncodedString {
+                        length: 23,
+                        string: "/usr/lib64/libc-2.32.so".as_bytes().to_vec(),
+                    },
+                    EncodedString {
+                        length: 24,
+                        string: "/usr/lib64/libdl-2.32.so".as_bytes().to_vec(),
+                    },
+                ],
             },
             parsed_response
         );
