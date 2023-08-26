@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
-use deku::prelude::*;
+use std::vec;
 
+use deku::prelude::*;
 
 type Pid = i32;
 
@@ -41,10 +42,8 @@ pub struct C2STargetPidPacket {
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
-pub struct EncodedProcess {
-    pub length: u32,
-    #[deku(count = "length")]
-    pub name: Vec<u8>,
+pub struct ProcessEntry {
+    pub name: EncodedString,
     pub pid: Pid,
 }
 
@@ -55,9 +54,8 @@ pub struct S2CSendProcessesPacket {
     #[deku(update = "self.processes.len() as u32")]
     pub count: u32,
     #[deku(count = "count")]
-    pub processes: Vec<EncodedProcess>,
+    pub processes: Vec<ProcessEntry>,
 }
-
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
@@ -84,14 +82,42 @@ pub struct EncodedString {
 }
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
+pub struct Region {
+    pub start: u64,
+    pub end: u64,
+    pub size: u64,
+    pub permissions: u32,
+    pub offset: u64,
+    pub device: u64,
+    pub inode: u64,
+    pub pathname: EncodedString,
+}
+
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
 pub struct S2CTargetPidRegionsPacket {
     _type: PacketType,
     #[deku(update = "self.regions.len() as u32")]
     pub count: u32,
     #[deku(count = "count")]
-    pub regions: Vec<EncodedString>,
+    pub regions: Vec<Region>,
 }
+
+impl EncodedString {
+    //todo!("Avoid copying the string");
+    pub fn new(string: String) -> Self {
+        Self {
+            length: string.len() as u32,
+            string: string.as_bytes().to_vec(),
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        String::from_utf8(self.string.clone()).unwrap()
+    }
+}
+
 
 impl PacketType {
     pub fn from_u8(value: u8) -> Option<Self> {
@@ -104,16 +130,6 @@ impl PacketType {
         }
     }
 }
-
-// impl EncodedString {
-//     pub fn out_bytes(string: String) -> Vec<u8> {
-//         let object = EncodedString {
-//             length: string.len() as u32,
-//             string: string.into_bytes(),
-//         };
-//         object.to_bytes().unwrap()
-//     }
-// }
 
 impl C2STargetPidPacket {
     pub fn parse(data: &[u8]) -> Self {
@@ -198,35 +214,31 @@ impl S2CTargetPidRegionsPacket {
         let (_, value) = S2CTargetPidRegionsPacket::from_bytes((data, 0)).unwrap();
         value
     }
-    pub fn out_bytes(regions: Vec<String>) -> Vec<u8> {
-
-        let encoded_regions: Vec<EncodedString> = regions.iter().map(|s| {
-            EncodedString {
-                length: s.len() as u32,
-                string: s.as_bytes().to_vec(),
-            }
-        }).collect();
-
+    pub fn out_bytes(regions: Vec<Region>) -> Vec<u8> {
         let object = S2CTargetPidRegionsPacket {
             _type: PacketType::TargetPID,
-            count: encoded_regions.len() as u32,
-            regions: encoded_regions,
+            count: regions.len() as u32,
+            regions: regions,
         };
         object.to_bytes().unwrap()
     }
 }
 
-// impl S2CSendProcessesPacket {
-//     pub fn parse(data: &[u8]) -> Self {
-//         let (_, value) = S2CSendProcessesPacket::from_bytes((data, 0)).unwrap();
-//         value
-//     }
+impl S2CSendProcessesPacket {
+    pub fn parse(data: &[u8]) -> Self {
+        let (_, value) = S2CSendProcessesPacket::from_bytes((data, 0)).unwrap();
+        value
+    }
 
-//     pub fn out_bytes(_type: PacketType, address: u64, bytes: Vec<u8>) -> Vec<u8> {
-//         let object = S2CSendProcessesPacket { _type, address, count: bytes.len() as u32, bytes };
-//         object.to_bytes().unwrap()
-//     }
-// }
+    pub fn out_bytes(processes: Vec<ProcessEntry>) -> Vec<u8> {
+        let object = S2CSendProcessesPacket {
+            _type: PacketType::SendProcesses,
+            count: processes.len() as u32,
+            processes: processes,
+        };
+        object.to_bytes().unwrap()
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -311,28 +323,56 @@ mod tests {
 
     #[test]
     fn test_target_pid_regions() {
-        const REGION_NAMES: [&str; 2] = [
-            "/usr/lib64/libc-2.32.so",
-            "/usr/lib64/libdl-2.32.so",
-            ];
-        
-        let owned_region_names: Vec<String> = REGION_NAMES.iter().map(|s| s.to_string()).collect();
-
-        let region_names_data = S2CTargetPidRegionsPacket::out_bytes(owned_region_names);
-        let parsed_response = S2CTargetPidRegionsPacket::parse(&region_names_data);
+            
+        let test_regions = vec![
+            Region {
+                start: 0x0000555555554000,
+                end: 0x0000555555555000,
+                size: 4096,
+                permissions: 5,
+                offset: 0,
+                device: 0,
+                inode: 0,
+                pathname: EncodedString::new("/home/username/Projects/memflow-web-service/target/debug/memflow-web-service".to_string()),
+            },
+            Region {
+                start: 0x00007ffff7dc0000,
+                end: 0x00007ffff7dc1000,
+                size: 4096,
+                permissions: 4,
+                offset: 0,
+                device: 0,
+                inode: 0,
+                pathname: EncodedString::new("/home/username/Projects/memflow-web-service/target/debug/memflow-web-service".to_string()),
+            },
+        ];
+        let data = S2CTargetPidRegionsPacket::out_bytes(test_regions);
+        let parsed_response = S2CTargetPidRegionsPacket::parse(&data);
 
         assert_eq!(
             S2CTargetPidRegionsPacket {
                 _type: PacketType::TargetPID,
-                count: REGION_NAMES.len() as u32,
+                count: 2,
                 regions: vec![
-                    EncodedString {
-                        length: 23,
-                        string: "/usr/lib64/libc-2.32.so".as_bytes().to_vec(),
+                    Region {
+                        start: 0x0000555555554000,
+                        end: 0x0000555555555000,
+                        size: 4096,
+                        permissions: 5,
+                        offset: 0,
+                        device: 0,
+                        inode: 0,
+                        pathname: EncodedString::new("/home/username/Projects/memflow-web-service/target/debug/memflow-web-service".to_string()),
                     },
-                    EncodedString {
-                        length: 24,
-                        string: "/usr/lib64/libdl-2.32.so".as_bytes().to_vec(),
+                    Region {
+                        start: 0x00007ffff7dc0000,
+                        end: 0x00007ffff7dc1000,
+                        size: 4096,
+                        permissions: 4,
+                        offset: 0,
+                        device: 0,
+                        inode: 0,
+                        pathname: EncodedString::new("/home/username/Projects/memflow-web-service/target/debug/memflow-web-service".to_string()),
                     },
                 ],
             },
@@ -340,17 +380,39 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_send_processes_packet() {
-    //     let data = S2CSendProcessesPacket::out_bytes(PacketType::SendProcesses, 1234567890);
-    //     let packet = S2CSendProcessesPacket::parse(&data);
+    #[test]
+    fn test_send_processes_packet() {
 
-    //     assert_eq!(
-    //         S2CSendProcessesPacket {
-    //             _type: PacketType::SendProcesses,
-    //             target_pid: 1234567890,
-    //         },
-    //         packet
-    //     );
-    // }
+        let test_processes = vec![
+            ProcessEntry {
+                name: EncodedString::new("memflow-web-service".to_string()),
+                pid: 1234567890,
+            },
+            ProcessEntry {
+                name: EncodedString::new("memflow-web-service-2".to_string()),
+                pid: 0987654321,
+            },
+        ];
+
+        let data = S2CSendProcessesPacket::out_bytes(test_processes);
+        let packet = S2CSendProcessesPacket::parse(&data);
+
+        assert_eq!(
+            S2CSendProcessesPacket {
+                _type: PacketType::SendProcesses,
+                count: 2,
+                processes: vec![
+                    ProcessEntry {
+                        name: EncodedString::new("memflow-web-service".to_string()),
+                        pid: 1234567890,
+                    },
+                    ProcessEntry {
+                        name: EncodedString::new("memflow-web-service-2".to_string()),
+                        pid: 0987654321,
+                    },
+                ],
+            },
+            packet
+        );
+    }
 }
