@@ -11,16 +11,12 @@ fn process_vm_readev(pid: pid_t, local_iov: &iovec, liovcnt: c_int, remote_iov: 
 }
 
 pub struct Memory {
-    pid: pid_t
+    pub pid: pid_t,
 }
 
 impl Memory {
     pub fn new(pid: i32) -> Memory {
         Memory { pid }
-    }
-
-    pub fn pid(&mut self, pid: i32) {
-        self.pid = pid;
     }
 
     #[cfg(not(feature = "fake_read_write"))]

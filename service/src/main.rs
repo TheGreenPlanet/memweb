@@ -35,7 +35,7 @@ fn main() {
             let mut session = session::ClientSession::new(websocket);
 
             loop {
-                let msg = session.websocket().read_message().unwrap();
+                let msg = session.websocket.read_message().unwrap();
 
                 // We do not want to send back ping/pong messages.
                 if msg.is_binary() || msg.is_text() {

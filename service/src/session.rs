@@ -1,11 +1,13 @@
 use crate::memory;
-use shared::protocol::*;
+use shared::{process::{*, self}, protocol::*};
 use std::{io::Error, net::TcpStream};
 use tungstenite::{
     accept_hdr,
     handshake::server::{Request, Response},
     Message, WebSocket,
 };
+
+use memory::Memory;
 
 enum ClientServerStateFlow {
     NewBorn,
@@ -16,17 +18,17 @@ enum ClientServerStateFlow {
 }
 
 pub struct ClientSession {
-    websocket: WebSocket<TcpStream>,
+    pub websocket: WebSocket<TcpStream>,
     state: ClientServerStateFlow,
-    memory: memory::Memory,
+    memory: Memory,
 }
 
 impl ClientSession {
     pub fn new(websocket: WebSocket<TcpStream>) -> Self {
         Self {
             websocket,
-            memory: memory::Memory::new(-1),
             state: ClientServerStateFlow::NewBorn,
+            memory: Memory::new(-1),
         }
     }
 
@@ -72,28 +74,39 @@ impl ClientSession {
                 let packet = C2STargetPidPacket::parse(&packet_data);
 
                 self.set_target_pid(packet.target_pid);
+
+
+                let target_regions = get_regions(packet.target_pid);
+
+                self.websocket
+                    .write_message(Message::Binary(
+                        S2CTargetPidRegionsPacket::out_bytes(target_regions),
+                    ))
+                    .unwrap();
             },
             Some(PacketType::SendProcesses) => {
-                println!("Send Processes");
+                let processes = get_running_processes();
+
+                self.websocket
+                    .write_message(Message::Binary(
+                        S2CSendProcessesPacket::out_bytes(processes),
+                    ))
+                    .unwrap();
             },
             _ => println!("Unknown packet type"),
         };
     }
 
-    pub fn websocket(&mut self) -> &mut WebSocket<TcpStream> {
-        &mut self.websocket
-    }
-
     #[cfg(not(feature = "fake_read_write"))]
     fn set_target_pid(&mut self, pid: i32) {
         self.state = ClientServerStateFlow::TargetPID;
-        self.memory.pid(pid);
+        self.memory.pid = pid;
     }
 
     #[cfg(feature = "fake_read_write")]
     fn set_target_pid(&mut self, pid: i32) {
         println!("Target Pid: {}", pid);
         self.state = ClientServerStateFlow::TargetPID;
-        self.memory.pid(pid);
+        self.memory.pid = pid;
     }
 }
