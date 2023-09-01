@@ -72,26 +72,30 @@ impl ClientSession {
             },
             Some(PacketType::TargetPID) => {
                 let packet = C2STargetPidPacket::parse(&packet_data);
-
                 self.set_target_pid(packet.target_pid);
 
-
-                let target_regions = get_regions(packet.target_pid);
-
-                self.websocket
-                    .write_message(Message::Binary(
-                        S2CTargetPidRegionsPacket::out_bytes(target_regions),
-                    ))
-                    .unwrap();
+                match get_regions(packet.target_pid) {
+                    Ok(regions) => {
+                        self.websocket
+                            .write_message(Message::Binary(
+                                S2CTargetPidRegionsPacket::out_bytes(regions),
+                            ))
+                            .unwrap();
+                    }
+                    Err(error) => self.error_response(error),
+                }
             },
             Some(PacketType::SendProcesses) => {
-                let processes = get_running_processes();
-
-                self.websocket
-                    .write_message(Message::Binary(
-                        S2CSendProcessesPacket::out_bytes(processes),
-                    ))
-                    .unwrap();
+                match get_running_processes() {
+                    Ok(processes) => {
+                        self.websocket
+                            .write_message(Message::Binary(
+                                S2CSendProcessesPacket::out_bytes(processes),
+                            ))
+                            .unwrap();
+                    }
+                    Err(error) => self.error_response(error),
+                }
             },
             _ => println!("Unknown packet type"),
         };
