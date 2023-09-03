@@ -1,47 +1,54 @@
-use proc_maps::*;
+use procfs::{*, process::{Process, MMapPath}};
+
 
 use crate::protocol::{Region, ProcessEntry, EncodedString};
 
 pub fn get_regions(pid: i32) -> std::io::Result<Vec<Region>> {
-    let maps = get_process_maps(pid)?;
+    let process = Process::new(pid).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let maps = process.maps().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
     Ok(maps.iter()
         .map(|map_range| Region {
-            start: map_range.start() as u64,
-            end: map_range.start() as u64 + map_range.size() as u64,
-            size: map_range.size() as u64,
-            permissions: permissions_to_u32(map_range.flags.as_str()),
-            offset: map_range.offset as u64,
-            device: EncodedString::new(map_range.dev.clone()),
-            inode: map_range.inode as u64,
-            pathname: EncodedString::new(map_range.filename().unwrap().to_str().unwrap().to_string()),
+            start: map_range.address.0,
+            end: map_range.address.1,
+            size: map_range.address.1 - map_range.address.0,
+            permissions: map_range.perms.bits(),
+            offset: map_range.offset,
+            device: EncodedString::new(map_range.dev.0.to_string() + ":" + &map_range.dev.1.to_string()),
+            inode: map_range.inode,
+            pathname: match &map_range.pathname {
+                MMapPath::Path(path) => EncodedString::new(path.to_str().unwrap().to_string()),
+                MMapPath::Other(s) => EncodedString::new(s.clone()),
+                MMapPath::Heap => todo!(),
+                MMapPath::Stack => todo!(),
+                MMapPath::TStack(_) => todo!(),
+                MMapPath::Vdso => todo!(),
+                MMapPath::Vvar => todo!(),
+                MMapPath::Vsyscall => todo!(),
+                MMapPath::Rollup => todo!(),
+                MMapPath::Anonymous => todo!(),
+                MMapPath::Vsys(_) => todo!(),
+            }
         })
         .collect())
 }
 
-pub fn get_running_processes() -> std::io::Result<Vec<ProcessEntry>> {
-    todo!("Implement me!")
-}
-
-const READ: u32 = 0b0001;      // 1 << 0
-const WRITE: u32 = 0b0010;     // 1 << 1
-const EXECUTE: u32 = 0b0100;   // 1 << 2
-const PRIVATE: u32 = 0b1000;   // 1 << 3
-// Add more flags as needed
-
-fn permissions_to_u32(permissions: &str) -> u32 {
-    let mut result = 0;
-
-    for ch in permissions.chars() {
-        match ch {
-            'r' => result |= READ,
-            'w' => result |= WRITE,
-            'x' => result |= EXECUTE,
-            'p' => result |= PRIVATE,
-            // Handle other permissions as needed
-            _ => {}
-        }
+fn create_process_entry(proc: Result<Process, ProcError>) -> ProcessEntry {
+    let p = proc.unwrap();
+    let mut name = p.cmdline().unwrap().join(" ");
+    if name.is_empty() {
+        name = p.stat().unwrap().comm;
     }
 
-    result
+    ProcessEntry {
+        pid: p.pid(),
+        name: EncodedString::new(name),
+    }
+}
+
+pub fn get_running_processes() -> std::io::Result<Vec<ProcessEntry>> {
+    let procs = process::all_processes().unwrap();
+    Ok(procs
+        .map(create_process_entry)
+        .collect())
 }

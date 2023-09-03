@@ -87,7 +87,7 @@ pub struct Region {
     pub start: u64,
     pub end: u64,
     pub size: u64,
-    pub permissions: u32,
+    pub permissions: u8,
     pub offset: u64,
     pub device: EncodedString,
     pub inode: u64,

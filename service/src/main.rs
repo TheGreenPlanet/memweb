@@ -1,5 +1,6 @@
 use std::net::TcpListener;
 use std::thread::spawn;
+use log::info;
 use tungstenite::{
     accept_hdr,
     handshake::server::{Request, Response}, Message,
@@ -12,8 +13,9 @@ mod memory;
 fn main() {
     let _ = env_logger::init();
     let addr = env::args().nth(1).unwrap_or_else(|| "127.0.0.1:8080".to_string());
+    info!("Listening on: {}", addr);
     let server = TcpListener::bind(addr).unwrap();
-    // info!("Listening on: {}", addr);
+
     for stream in server.incoming() {
         spawn(move || {
             let callback = |req: &Request, mut response: Response| {
