@@ -1,5 +1,5 @@
 [package]
-name = "memweb-service"
+name = "memweb"
 version = "0.1.0"
 authors = ["TheGreenPlanet"]
 edition = "2021"
