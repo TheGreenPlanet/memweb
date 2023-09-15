@@ -16,19 +16,19 @@ pub fn get_regions(pid: i32) -> std::io::Result<Vec<Region>> {
             offset: map_range.offset,
             device: EncodedString::new(map_range.dev.0.to_string() + ":" + &map_range.dev.1.to_string()),
             inode: map_range.inode,
-            pathname: match &map_range.pathname {
-                MMapPath::Path(path) => EncodedString::new(path.to_str().unwrap().to_string()),
-                MMapPath::Other(s) => EncodedString::new(s.clone()),
-                MMapPath::Heap => todo!(),
-                MMapPath::Stack => todo!(),
-                MMapPath::TStack(_) => todo!(),
-                MMapPath::Vdso => todo!(),
-                MMapPath::Vvar => todo!(),
-                MMapPath::Vsyscall => todo!(),
-                MMapPath::Rollup => todo!(),
-                MMapPath::Anonymous => todo!(),
-                MMapPath::Vsys(_) => todo!(),
-            }
+            pathname: EncodedString::new(match &map_range.pathname {
+                MMapPath::Path(path) => path.to_str().unwrap().to_string(),
+                MMapPath::Other(s) => s.clone(),
+                MMapPath::Heap => "[Heap]".into(),
+                MMapPath::Stack => "[Stack]".into(),
+                MMapPath::TStack(tid) => format!("TStack: {}", tid),
+                MMapPath::Vdso => "[Vdso]".into(),
+                MMapPath::Vvar => "[Vvar]".into(),
+                MMapPath::Vsyscall => "[Vsyscall]".into(),
+                MMapPath::Rollup => "[Rollup]".into(),
+                MMapPath::Anonymous => "[Anonymous]".into(),
+                MMapPath::Vsys(shared_mem_seg) => format!("Vsys: {}", shared_mem_seg),
+            })
         })
         .collect())
 }

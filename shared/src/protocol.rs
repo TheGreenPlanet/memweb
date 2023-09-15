@@ -41,6 +41,12 @@ pub struct C2STargetPidPacket {
 }
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "big")]
+pub struct C2SGetProcessesPacket {
+    _type: PacketType,
+}
+
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")]
 pub struct ProcessEntry {
     pub name: EncodedString,
@@ -174,6 +180,20 @@ impl C2SWriteMemoryPacket {
             address,
             count: bytes.len() as u32,
             bytes,
+        };
+        object.to_bytes().unwrap()
+    }
+}
+
+impl C2SGetProcessesPacket {
+    pub fn parse(data: &[u8]) -> Self {
+        let (_, value) = C2SGetProcessesPacket::from_bytes((data, 0)).unwrap();
+        value
+    }
+
+    pub fn out_bytes() -> Vec<u8> {
+        let object = C2SGetProcessesPacket {
+            _type: PacketType::SendProcesses,
         };
         object.to_bytes().unwrap()
     }

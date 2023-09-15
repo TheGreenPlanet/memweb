@@ -7,4 +7,7 @@ edition = "2021"
 
 [dependencies]
 deku = "0.16.0"
+[target.'cfg(target_os = "linux")'.dependencies]
 procfs = "0.15.1"
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+errno = "0.3.3"

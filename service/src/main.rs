@@ -12,7 +12,7 @@ mod memory;
 
 fn main() {
     let _ = env_logger::init();
-    let addr = env::args().nth(1).unwrap_or_else(|| "127.0.0.1:8080".to_string());
+    let addr = env::args().nth(1).unwrap_or_else(|| "127.0.0.1:8069".to_string());
     info!("Listening on: {}", addr);
     let server = TcpListener::bind(addr).unwrap();
 
