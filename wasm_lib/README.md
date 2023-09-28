@@ -1,6 +1,6 @@
 # WASM Lib
 
-This is a simple client-module exposing top-level functions for the shared protocol.
+This is a streamlined client module that provides top-level API functions for protocol communication.
 
 To build:
 ```bash
