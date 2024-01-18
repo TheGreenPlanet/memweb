@@ -9,12 +9,13 @@ name = "memweb"
 path = "src/main.rs"
 
 [dependencies]
-env_logger = "0.10.0"
+env_logger = "0.10.2"
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-errno = "0.3.3"
-libc = "0.2.139"
-log = "0.4.17"
-tungstenite = "0.18.0"
+errno = "0.3.8"
+libc = "0.2.152"
+log = "0.4.20"
+tungstenite = "0.21.0"
 shared = { version = "0.1.0", path = "../shared" }
 
 [features]

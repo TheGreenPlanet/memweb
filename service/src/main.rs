@@ -1,18 +1,21 @@
+use log::info;
+use std::env;
 use std::net::TcpListener;
 use std::thread::spawn;
-use log::info;
 use tungstenite::{
     accept_hdr,
-    handshake::server::{Request, Response}, Message,
+    handshake::server::{Request, Response},
+    Message,
 };
-use std::env;
 
-mod session;
 mod memory;
+mod session;
 
 fn main() {
     let _ = env_logger::init();
-    let addr = env::args().nth(1).unwrap_or_else(|| "127.0.0.1:8069".to_string());
+    let addr = env::args()
+        .nth(1)
+        .unwrap_or_else(|| "127.0.0.1:8069".to_string());
     info!("Listening on: {}", addr);
     let server = TcpListener::bind(addr).unwrap();
 
@@ -33,6 +36,7 @@ fn main() {
 
                 Ok(response)
             };
+
             let websocket = accept_hdr(stream.unwrap(), callback).unwrap();
             let mut session = session::ClientSession::new(websocket);
 
