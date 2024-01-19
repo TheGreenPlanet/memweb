@@ -1,5 +1,5 @@
 # memweb
-R/W memory of any given Linux process from the web ASAP.
+R/W memory of any given Linux process through a websocket ASAP.
 
 ## Aim
 This project aims to delve into the future of web development, specifically focusing on native web apps. By leveraging the programming language Rust and WebAssembly (WASM), the tool delivers a native-like experience in the web browser, with only a slight (~10%) performance difference.
