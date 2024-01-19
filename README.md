@@ -16,6 +16,10 @@ Build the memweb (service) binary:
 cargo build --release --package memweb
 ```
 ## Run
+First navigate to the *service/* directory.
+```bash
+cd service/
+```
 
 Run service (in usermode)
 ```
