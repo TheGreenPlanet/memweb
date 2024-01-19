@@ -1,9 +1,7 @@
 use crate::memory;
-use shared::{process::{*, self}, protocol::*};
+use shared::{process::{*}, protocol::*};
 use std::{io::Error, net::TcpStream};
 use tungstenite::{
-    accept_hdr,
-    handshake::server::{Request, Response},
     Message, WebSocket,
 };
 

@@ -5,7 +5,6 @@ use std::thread::spawn;
 use tungstenite::{
     accept_hdr,
     handshake::server::{Request, Response},
-    Message,
 };
 
 mod memory;

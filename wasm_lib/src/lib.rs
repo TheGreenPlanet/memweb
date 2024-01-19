@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use shared::protocol::*;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn greet(name: &str) -> String {
@@ -15,25 +15,31 @@ pub fn parse_payload_to_string(msg: &[u8]) -> String {
         Some(PacketType::Read) => {
             let packet = S2CReadMemoryPacketResponse::parse(&msg);
             format!("Read: count: {}, data: {:?}", packet.count, packet.data)
-        },
+        }
         Some(PacketType::Write) => {
             let packet = S2CWriteMemoryPacketResponse::parse(&msg);
             format!("Write: bytes written: {}", packet.bytes_written)
-        },
+        }
         Some(PacketType::TargetPID) => {
             let packet = S2CTargetPidRegionsPacket::parse(&msg);
             let regions_string = packet.regions.iter().fold(String::new(), |acc, region| {
                 acc + &format!("Start: {}, End: {}, Size: {}, Permissions: {}, Offset: {}, Device: {}, Inode: {}, Pathname: {}\n", region.start, region.end, region.size, region.permissions, region.offset, region.device.to_string(), region.inode, region.pathname.to_string())
             });
-            format!("TargetPID: count: {}, regions: {}\n", packet.count, regions_string)
-        },
+            format!(
+                "TargetPID: count: {}, regions: {}\n",
+                packet.count, regions_string
+            )
+        }
         Some(PacketType::SendProcesses) => {
             let packet = S2CSendProcessesPacket::parse(&msg);
             let processes = packet.processes.iter().fold(String::new(), |acc, process| {
                 acc + &format!("Pid: {}, Name: {}\n", process.pid, process.name.to_string())
             });
-            format!("SendProcesses: count: {} processes: {}\n", packet.count, processes)
-        },
+            format!(
+                "SendProcesses: count: {} processes: {}\n",
+                packet.count, processes
+            )
+        }
         None => {
             format!("None")
         }
