@@ -15,3 +15,19 @@ Build the memweb (service) binary:
 ```bash
 cargo build --release --package memweb
 ```
+## Run
+
+Run service (in usermode)
+```
+cargo run
+```
+
+Run service (replacing *process_vm_writev* *process_vm_readv* with *println*)
+```bash
+cargo run --features "fake_read_write"
+```
+Install the service (temporarily)
+```bash
+sudo su
+./install-service.sh
+```
