@@ -1,6 +1,4 @@
 #![allow(non_snake_case)]
-use std::vec;
-
 use deku::prelude::*;
 
 type Pid = i32;
