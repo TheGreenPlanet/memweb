@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 use deku::prelude::*;
+use crate::compression;
 
 type Pid = i32;
 
@@ -229,7 +230,8 @@ impl S2CWriteMemoryPacketResponse {
 
 impl S2CTargetPidRegionsPacket {
     pub fn parse(data: &[u8]) -> Self {
-        let (_, value) = S2CTargetPidRegionsPacket::from_bytes((data, 0)).unwrap();
+        let decompressed_data = compression::decompress(&data);
+        let (_, value) = S2CTargetPidRegionsPacket::from_bytes((decompressed_data.as_ref(), 0)).unwrap();
         value
     }
     pub fn out_bytes(regions: Vec<Region>) -> Vec<u8> {
@@ -238,13 +240,15 @@ impl S2CTargetPidRegionsPacket {
             count: regions.len() as u32,
             regions: regions,
         };
-        object.to_bytes().unwrap()
+
+        compression::compress(object.to_bytes().unwrap().as_ref())
     }
 }
 
 impl S2CSendProcessesPacket {
     pub fn parse(data: &[u8]) -> Self {
-        let (_, value) = S2CSendProcessesPacket::from_bytes((data, 0)).unwrap();
+        let decompressed_data = compression::decompress(&data);
+        let (_, value) = S2CSendProcessesPacket::from_bytes((decompressed_data.as_ref(), 0)).unwrap();
         value
     }
 
@@ -254,7 +258,7 @@ impl S2CSendProcessesPacket {
             count: processes.len() as u32,
             processes: processes,
         };
-        object.to_bytes().unwrap()
+        compression::compress(object.to_bytes().unwrap().as_ref())
     }
 }
 
