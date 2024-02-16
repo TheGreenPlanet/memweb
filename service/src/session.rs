@@ -1,7 +1,8 @@
 use crate::memory;
+use log::{info, warn};
 use shared::{process::*, protocol::*};
-use std::{
-    io::{Error, Read, Write},
+use tokio::{
+    io::{self, AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
 
@@ -31,13 +32,21 @@ impl ClientSession {
         }
     }
 
-    fn error_response(&mut self, error: Error) {
-        self.stream.write_all(error.to_string().as_bytes()).unwrap();
+    async fn error_response(&mut self, error: io::Error) -> Result<(), io::Error> {
+        let error_message = format!("Error: {}", error);
+        self.stream.write_all(error_message.as_bytes()).await // Await the async write operation
     }
 
-    pub fn handle_message(&mut self) {
+    pub async fn handle_message(&mut self) -> Result<(), io::Error> {
         let mut buffer = [0; 1024];
-        let size = self.stream.read(&mut buffer).unwrap();
+        let size = self.stream.read(&mut buffer).await?;
+        if size == 0 {
+            // Connection closed by the client
+            return Err(io::Error::new(
+                io::ErrorKind::BrokenPipe,
+                "Client disconnected",
+            ));
+        }
         let msg = buffer[..size].to_vec();
 
         match PacketType::from_u8(msg[0]) {
@@ -48,9 +57,9 @@ impl ClientSession {
                     Ok(result) => {
                         self.stream
                             .write_all(&S2CReadMemoryPacketResponse::out_bytes(result))
-                            .unwrap();
+                            .await?;
                     }
-                    Err(error) => self.error_response(error),
+                    Err(error) => self.error_response(error).await?,
                 }
             }
             Some(PacketType::Write) => {
@@ -60,9 +69,9 @@ impl ClientSession {
                     Ok(result) => {
                         self.stream
                             .write_all(&S2CWriteMemoryPacketResponse::out_bytes(result as u64))
-                            .unwrap();
+                            .await?;
                     }
-                    Err(error) => self.error_response(error),
+                    Err(error) => self.error_response(error).await?,
                 }
             }
             Some(PacketType::TargetPID) => {
@@ -73,21 +82,25 @@ impl ClientSession {
                     Ok(regions) => {
                         self.stream
                             .write_all(&S2CTargetPidRegionsPacket::out_bytes(regions))
-                            .unwrap();
+                            .await?;
                     }
-                    Err(error) => self.error_response(error),
+                    Err(error) => self.error_response(error).await?,
                 }
             }
             Some(PacketType::SendProcesses) => match get_running_processes() {
                 Ok(processes) => {
+                    let processes_packet = S2CSendProcessesPacket::out_bytes(processes);
+                    info!("processes: {:?}", processes_packet.len());
                     self.stream
-                        .write_all(&S2CSendProcessesPacket::out_bytes(processes))
-                        .unwrap();
+                        .write_all(&processes_packet)
+                        .await?;
                 }
-                Err(error) => self.error_response(error),
+                Err(error) => self.error_response(error).await?,
             },
-            _ => println!("Unknown packet type"),
+            _ => warn!("Unknown packet type"),
         };
+
+        Ok(())
     }
 
     #[cfg(not(feature = "fake_read_write"))]
