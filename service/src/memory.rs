@@ -1,5 +1,6 @@
 use errno::errno;
-use libc::{c_int, c_void, iovec, pid_t, syscall, SYS_process_vm_readv, SYS_process_vm_writev};
+use libc::{c_int, c_long, c_void, iovec, pid_t, ssize_t, syscall, SYS_process_vm_readv, SYS_process_vm_writev};
+use log::info;
 use std::io;
 
 fn process_vm_writev(
@@ -8,6 +9,7 @@ fn process_vm_writev(
     liovcnt: c_int,
     remote_iov: &iovec,
     riovcnt: c_int,
+    flags: c_long,
 ) -> isize {
     unsafe {
         syscall(
@@ -17,7 +19,8 @@ fn process_vm_writev(
             liovcnt,
             remote_iov as *const iovec,
             riovcnt,
-        ) as isize
+            flags
+        ) as ssize_t
     }
 }
 
@@ -27,6 +30,7 @@ fn process_vm_readev(
     liovcnt: c_int,
     remote_iov: &iovec,
     riovcnt: c_int,
+    flags: c_long,
 ) -> isize {
     unsafe {
         syscall(
@@ -36,7 +40,8 @@ fn process_vm_readev(
             liovcnt,
             remote_iov as *const iovec,
             riovcnt,
-        ) as isize
+            flags
+        ) as ssize_t
     }
 }
 
@@ -51,11 +56,15 @@ impl Memory {
 
     #[cfg(not(feature = "fake_read_write"))]
     pub fn read(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
+        use std::vec;
+
         if self.pid == -1 {
             return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
         }
 
+        // The result buffer does not need to be allocated on the stack
         let mut result = vec![0; size];
+
         let local_iov = iovec {
             iov_base: result.as_mut_ptr() as *mut c_void,
             iov_len: size,
@@ -65,7 +74,7 @@ impl Memory {
             iov_len: size,
         };
 
-        let bytes_read = process_vm_readev(self.pid, &local_iov, 1, &remote_iov, 1);
+        let bytes_read = process_vm_readev(self.pid, &local_iov, 1, &remote_iov, 1, 0);
 
         if bytes_read == -1 {
             let e = errno();
@@ -90,7 +99,7 @@ impl Memory {
         }
 
         let mut result = vec![1; size];
-        println!("Fake read: address={}, size={:?}", address, size);
+        println!("Fake read: address={:x}, size={:?}", address, size);
         Ok(result)
     }
 
@@ -110,7 +119,7 @@ impl Memory {
             iov_len: size,
         };
 
-        let bytes_written = process_vm_writev(self.pid, &local_iov, 1, &remote_iov, 1);
+        let bytes_written = process_vm_writev(self.pid, &local_iov, 1, &remote_iov, 1, 0);
 
         if bytes_written == -1 {
             let e = errno();
@@ -133,7 +142,7 @@ impl Memory {
         if self.pid == -1 {
             return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
         }
-        println!("Fake write: address={}, bytes={:?}", address, buffer);
+        println!("Fake write: address={:x}, bytes={:?}", address, buffer);
         Ok(buffer.len())
     }
 }

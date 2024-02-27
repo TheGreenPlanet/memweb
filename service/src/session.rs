@@ -1,5 +1,5 @@
 use crate::memory;
-use log::{info, warn};
+use log::{error, info, warn};
 use shared::{process::*, protocol::*};
 use tokio::{
     io::{self, AsyncReadExt, AsyncWriteExt},
@@ -32,8 +32,9 @@ impl ClientSession {
         }
     }
 
-    async fn error_response(&mut self, error: io::Error) -> Result<(), io::Error> {
-        let error_message = format!("Error: {}", error);
+    async fn error_response(&mut self, err: io::Error) -> Result<(), io::Error> {
+        let error_message = format!("Error: {}", err);
+        error!("{}", error_message);
         self.stream.write_all(error_message.as_bytes()).await // Await the async write operation
     }
 
