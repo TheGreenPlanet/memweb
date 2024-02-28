@@ -4,7 +4,7 @@ use super::PacketType;
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-pub struct RequestReadMemoryPacket {
+pub struct RequestReadVecMemoryPacket {
     _type: PacketType,
     pub address: u64,
     pub size: u32,
@@ -50,14 +50,14 @@ pub struct ReceiveReadI64PacketResponse {
     pub value: i64,
 }
 
-impl RequestReadMemoryPacket {
+impl RequestReadVecMemoryPacket {
     pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = RequestReadMemoryPacket::from_bytes((data, 0)).unwrap();
+        let (_, value) = RequestReadVecMemoryPacket::from_bytes((data, 0)).unwrap();
         value
     }
 
     pub fn serialize(address: u64, size: u32) -> Vec<u8> {
-        let object = RequestReadMemoryPacket {
+        let object = RequestReadVecMemoryPacket {
             _type: PacketType::Read,
             address,
             size,
@@ -151,11 +151,11 @@ mod tests {
 
     #[test]
     fn test_read_memory_packet() {
-        let data = RequestReadMemoryPacket::serialize(1337, 100);
-        let packet = RequestReadMemoryPacket::deserialize(&data);
+        let data = RequestReadVecMemoryPacket::serialize(1337, 100);
+        let packet = RequestReadVecMemoryPacket::deserialize(&data);
 
         assert_eq!(
-            RequestReadMemoryPacket {
+            RequestReadVecMemoryPacket {
                 _type: PacketType::Read,
                 address: 1337,
                 size: 100,
