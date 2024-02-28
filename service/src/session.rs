@@ -93,7 +93,7 @@ impl ClientSession {
                 match self.memory.write(packet.address, &packet.bytes) {
                     Ok(result) => {
                         self.stream
-                            .write_all(&ReceiveWriteVecMemoryPacketResponse::out_bytes(result as u64))
+                            .write_all(&RequestWriteVecMemoryPacketResponse::serialize(result as u64))
                             .await?;
                     }
                     Err(error) => self.error_response(error).await?,

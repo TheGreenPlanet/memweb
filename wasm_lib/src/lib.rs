@@ -25,7 +25,7 @@ pub fn parse_payload_to_string(msg: &[u8]) -> String {
             format!("ReadI64: {}", packet.value)
         }
         Some(PacketType::Write) => {
-            let packet = ReceiveWriteVecMemoryPacketResponse::parse(&msg);
+            let packet = RequestWriteVecMemoryPacketResponse::deserialize(&msg);
             format!("Write: bytes written: {}", packet.bytes_written)
         }
         Some(PacketType::TargetPID) => {
