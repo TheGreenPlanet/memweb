@@ -1,6 +1,6 @@
 use crate::memory;
 use log::{error, info, warn};
-use shared::{process::*, protocol::*};
+use shared::{process::*, protocol::read_primitives::*, protocol::write_primitives::*, protocol::*};
 use tokio::{
     io::{self, AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -51,13 +51,37 @@ impl ClientSession {
         let msg = buffer[..size].to_vec();
 
         match PacketType::from_u8(msg[0]) {
-            Some(PacketType::Read) => {
-                let packet = C2SReadMemoryPacket::parse(&msg);
+            Some(PacketType::ReadVec) => {
+                let packet = RequestReadVecMemoryPacket::deserialize(&msg);
 
-                match self.memory.read(packet.address, packet.size as usize) {
+                match self.memory.read_vec(packet.address, packet.size as usize) {
                     Ok(result) => {
                         self.stream
-                            .write_all(&S2CReadMemoryPacketResponse::out_bytes(result))
+                            .write_all(&ReceiveReadVecPacketResponse::serialize(result))
+                            .await?;
+                    }
+                    Err(error) => self.error_response(error).await?,
+                }
+            }
+            Some(PacketType::ReadU64) => {
+                let packet = RequestReadU64MemoryPacket::deserialize(&msg);
+
+                match self.memory.read_u64(packet.address, packet.size as usize) {
+                    Ok(result) => {
+                        self.stream
+                            .write_all(&ReceiveReadU64PacketResponse::serialize(result))
+                            .await?;
+                    }
+                    Err(error) => self.error_response(error).await?,
+                }
+            }
+            Some(PacketType::ReadI64) => {
+                let packet = RequestReadI64MemoryPacket::deserialize(&msg);
+
+                match self.memory.read_i64(packet.address, packet.size as usize) {
+                    Ok(result) => {
+                        self.stream
+                            .write_all(&ReceiveReadI64PacketResponse::serialize(result))
                             .await?;
                     }
                     Err(error) => self.error_response(error).await?,

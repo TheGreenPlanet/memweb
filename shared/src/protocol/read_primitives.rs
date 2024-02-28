@@ -58,7 +58,7 @@ impl RequestReadVecMemoryPacket {
 
     pub fn serialize(address: u64, size: u32) -> Vec<u8> {
         let object = RequestReadVecMemoryPacket {
-            _type: PacketType::Read,
+            _type: PacketType::ReadVec,
             address,
             size,
         };
@@ -106,7 +106,7 @@ impl ReceiveReadVecPacketResponse {
 
     pub fn serialize(data: Vec<u8>) -> Vec<u8> {
         let object = ReceiveReadVecPacketResponse {
-            _type: PacketType::Read,
+            _type: PacketType::ReadVec,
             count: data.len() as u32,
             data,
         };
@@ -156,7 +156,7 @@ mod tests {
 
         assert_eq!(
             RequestReadVecMemoryPacket {
-                _type: PacketType::Read,
+                _type: PacketType::ReadVec,
                 address: 1337,
                 size: 100,
             },
@@ -173,7 +173,7 @@ mod tests {
 
         assert_eq!(
             ReceiveReadVecPacketResponse {
-                _type: PacketType::Read,
+                _type: PacketType::ReadVec,
                 count: 5,
                 data: vec![255, 100, 50, 25, 10],
             },

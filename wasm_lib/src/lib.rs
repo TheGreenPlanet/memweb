@@ -1,4 +1,4 @@
-use shared::protocol::*;
+use shared::protocol::{read_primitives::*, write_primitives::*, *};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -12,9 +12,17 @@ pub fn parse_payload_to_string(msg: &[u8]) -> String {
         return "Empty message".to_string();
     }
     match PacketType::from_u8(msg[0]) {
-        Some(PacketType::Read) => {
-            let packet = S2CReadMemoryPacketResponse::parse(&msg);
+        Some(PacketType::ReadVec) => {
+            let packet = ReceiveReadVecPacketResponse::deserialize(&msg);
             format!("Read: count: {}, data: {:?}", packet.count, packet.data)
+        }
+        Some(PacketType::ReadU64) => {
+            let packet = ReceiveReadU64PacketResponse::deserialize(&msg);
+            format!("ReadU64: {}", packet.value)
+        }
+        Some(PacketType::ReadI64) => {
+            let packet = ReceiveReadI64PacketResponse::deserialize(&msg);
+            format!("ReadI64: {}", packet.value)
         }
         Some(PacketType::Write) => {
             let packet = S2CWriteMemoryPacketResponse::parse(&msg);
@@ -53,7 +61,17 @@ pub fn target_pid_packet_data(pid: i32) -> Vec<u8> {
 
 #[wasm_bindgen]
 pub fn read_memory_packet_data(address: u64, size: u32) -> Vec<u8> {
-    C2SReadMemoryPacket::out_bytes(address, size)
+    RequestReadVecMemoryPacket::serialize(address, size)
+}
+
+#[wasm_bindgen]
+pub fn read_memory_u64_packet_data(address: u64, size: u8) -> Vec<u8> {
+    RequestReadU64MemoryPacket::serialize(address, size)
+}
+
+#[wasm_bindgen]
+pub fn read_memory_i64_packet_data(address: u64, size: u8) -> Vec<u8> {
+    RequestReadI64MemoryPacket::serialize(address, size)
 }
 
 #[wasm_bindgen]

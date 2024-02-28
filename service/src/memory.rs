@@ -55,7 +55,95 @@ impl Memory {
     }
 
     #[cfg(not(feature = "fake_read_write"))]
-    pub fn read(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
+    pub fn read_u64(&self, address: u64, size: usize) -> io::Result<u64> {
+
+        if self.pid == -1 {
+            return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
+        }
+
+        // The result buffer does not need to be allocated on the stack
+        let mut result: u64 = 0;
+
+        if size > std::mem::size_of::<u64>() {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Size is larger than u64!",
+            ));
+        }
+
+        let local_iov = iovec {
+            iov_base: &mut result as *mut _ as *mut c_void,
+            iov_len: size,
+        };
+        let remote_iov = iovec {
+            iov_base: address as *mut c_void,
+            iov_len: size,
+        };
+
+        let bytes_read = process_vm_readev(self.pid, &local_iov, 1, &remote_iov, 1, 0);
+
+        if bytes_read == -1 {
+            let e = errno();
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Error {}: {}", e.0, e),
+            ));
+        } else if bytes_read as usize != size {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Partial read occurred!",
+            ));
+        } else {
+            Ok(result)
+        }
+    }
+
+    #[cfg(not(feature = "fake_read_write"))]
+    pub fn read_i64(&self, address: u64, size: usize) -> io::Result<i64> {
+
+        if self.pid == -1 {
+            return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
+        }
+
+        // The result buffer does not need to be allocated on the stack
+        let mut result: i64 = 0;
+
+        if size > std::mem::size_of::<i64>() {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Size is larger than i64!",
+            ));
+        }
+
+        let local_iov = iovec {
+            iov_base: &mut result as *mut _ as *mut c_void,
+            iov_len: size,
+        };
+        let remote_iov = iovec {
+            iov_base: address as *mut c_void,
+            iov_len: size,
+        };
+
+        let bytes_read = process_vm_readev(self.pid, &local_iov, 1, &remote_iov, 1, 0);
+
+        if bytes_read == -1 {
+            let e = errno();
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Error {}: {}", e.0, e),
+            ));
+        } else if bytes_read as usize != size {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Partial read occurred!",
+            ));
+        } else {
+            Ok(result)
+        }
+    }
+
+    #[cfg(not(feature = "fake_read_write"))]
+    pub fn read_vec(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
         use std::vec;
 
         if self.pid == -1 {
@@ -93,7 +181,7 @@ impl Memory {
     }
 
     #[cfg(feature = "fake_read_write")]
-    pub fn read(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
+    pub fn read_vec(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
         if self.pid == -1 {
             return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
         }
