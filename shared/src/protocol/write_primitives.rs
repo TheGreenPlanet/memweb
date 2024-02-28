@@ -13,7 +13,7 @@ pub struct RequestWriteVecMemoryPacket {
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-pub struct ReceiveWriteVecMemoryPacketResponse {
+pub struct RequestWriteVecMemoryPacketResponse {
     _type: PacketType,
     pub bytes_written: u64,
 }
@@ -37,13 +37,13 @@ impl RequestWriteVecMemoryPacket {
     }
 }
 
-impl ReceiveWriteVecMemoryPacketResponse {
-    pub fn parse(data: &[u8]) -> Self {
-        let (_, value) = ReceiveWriteVecMemoryPacketResponse::from_bytes((data, 0)).unwrap();
+impl RequestWriteVecMemoryPacketResponse {
+    pub fn deserialize(data: &[u8]) -> Self {
+        let (_, value) = RequestWriteVecMemoryPacketResponse::from_bytes((data, 0)).unwrap();
         value
     }
-    pub fn out_bytes(bytes_written: u64) -> Vec<u8> {
-        let object = ReceiveWriteVecMemoryPacketResponse {
+    pub fn serialize(bytes_written: u64) -> Vec<u8> {
+        let object = RequestWriteVecMemoryPacketResponse {
             _type: PacketType::Write,
             bytes_written,
         };
@@ -74,11 +74,11 @@ mod tests {
     #[test]
     fn test_write_memory_packet_response() {
         const BYTES_WRITTEN: u64 = 100;
-        let response_data = ReceiveWriteVecMemoryPacketResponse::out_bytes(BYTES_WRITTEN);
-        let parsed_response = ReceiveWriteVecMemoryPacketResponse::parse(&response_data);
+        let response_data = RequestWriteVecMemoryPacketResponse::serialize(BYTES_WRITTEN);
+        let parsed_response = RequestWriteVecMemoryPacketResponse::deserialize(&response_data);
 
         assert_eq!(
-            ReceiveWriteVecMemoryPacketResponse {
+            RequestWriteVecMemoryPacketResponse {
                 _type: PacketType::Write,
                 bytes_written: 100,
             },
