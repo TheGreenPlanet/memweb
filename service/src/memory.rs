@@ -1,6 +1,5 @@
 use errno::errno;
 use libc::{c_int, c_long, c_void, iovec, pid_t, ssize_t, syscall, SYS_process_vm_readv, SYS_process_vm_writev};
-use log::info;
 use std::io;
 
 fn process_vm_writev(
@@ -144,14 +143,13 @@ impl Memory {
 
     #[cfg(not(feature = "fake_read_write"))]
     pub fn read_vec(&self, address: u64, size: usize) -> io::Result<Vec<u8>> {
-        use std::vec;
 
         if self.pid == -1 {
             return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
         }
 
         // The result buffer does not need to be allocated on the stack
-        let mut result = vec![0; size];
+        let mut result: Vec<u8> = vec![0; size];
 
         let local_iov = iovec {
             iov_base: result.as_mut_ptr() as *mut c_void,
@@ -171,6 +169,44 @@ impl Memory {
                 format!("Error {}: {}", e.0, e),
             ));
         } else if bytes_read as usize != size {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Partial read occurred!",
+            ));
+        } else {
+            Ok(result)
+        }
+    }
+
+    #[cfg(not(feature = "fake_read_write"))]
+    pub fn read_vec_f32(&self, address: u64, count: usize) -> io::Result<Vec<f32>> {
+
+        if self.pid == -1 {
+            return Err(io::Error::new(io::ErrorKind::Other, "PID not set!"));
+        }
+
+        // The result buffer does not need to be allocated on the stack
+        let mut result: Vec<f32> = vec![0.0; count];
+        let result_size = std::mem::size_of::<f32>() * count;
+
+        let local_iov = iovec {
+            iov_base: result.as_mut_ptr() as *mut c_void,
+            iov_len: result_size,
+        };
+        let remote_iov = iovec {
+            iov_base: address as *mut c_void,
+            iov_len: result_size,
+        };
+
+        let bytes_read = process_vm_readev(self.pid, &local_iov, 1, &remote_iov, 1, 0);
+
+        if bytes_read == -1 {
+            let e = errno();
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Error {}: {}", e.0, e),
+            ));
+        } else if bytes_read as usize != result_size {
             return Err(io::Error::new(
                 io::ErrorKind::Other,
                 "Partial read occurred!",

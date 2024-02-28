@@ -63,6 +63,18 @@ impl ClientSession {
                     Err(error) => self.error_response(error).await?,
                 }
             }
+            Some(PacketType::ReadVecF32) => {
+                let packet = RequestReadVecF32MemoryPacket::deserialize(&msg);
+
+                match self.memory.read_vec_f32(packet.address, packet.count as usize) {
+                    Ok(result) => {
+                        self.stream
+                            .write_all(&ReceiveReadVecF32PacketResponse::serialize(result))
+                            .await?;
+                    }
+                    Err(error) => self.error_response(error).await?,
+                }
+            }
             Some(PacketType::ReadU64) => {
                 let packet = RequestReadU64MemoryPacket::deserialize(&msg);
 
