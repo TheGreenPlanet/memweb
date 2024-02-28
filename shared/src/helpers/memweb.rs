@@ -8,7 +8,7 @@ pub struct MemWeb<'a> {
 }
 
 impl MemWeb<'_> {
-    pub fn new(stream: &mut TcpStream) -> MemWeb {
+    pub fn new(stream: &'a mut TcpStream) -> MemWeb {
         MemWeb { stream }
     }
 
