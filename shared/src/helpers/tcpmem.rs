@@ -1,3 +1,5 @@
+use std::string::FromUtf8Error;
+
 #[allow(dead_code)]
 
 use crate::protocol::{read_primitives::*, write_primitives::*};
@@ -135,6 +137,12 @@ impl<'a> TCPMemory<'a> {
     pub async fn read_i64(&mut self, address: u64) -> io::Result<i64> {
         let r = self.read_signed(address, 8).await?;
         unsafe { Ok(r.i64) }
+    }
+
+    pub async fn read_string(&mut self, address: u64, maxlen: u32) -> io::Result<Result<String, FromUtf8Error>> {
+        // convert little endian utf8 bytes to string
+        let bytes = self.read_vec(address, maxlen).await?;
+        Ok(String::from_utf8(bytes))
     }
 
     // pub async fn read_f32(&mut self, address: u64) -> io::Result<f32> {
