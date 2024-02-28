@@ -88,25 +88,25 @@ impl ClientSession {
                 }
             }
             Some(PacketType::Write) => {
-                let packet = C2SWriteMemoryPacket::parse(&msg);
+                let packet = RequestWriteVecMemoryPacket::deserialize(&msg);
 
                 match self.memory.write(packet.address, &packet.bytes) {
                     Ok(result) => {
                         self.stream
-                            .write_all(&S2CWriteMemoryPacketResponse::out_bytes(result as u64))
+                            .write_all(&ReceiveWriteVecMemoryPacketResponse::out_bytes(result as u64))
                             .await?;
                     }
                     Err(error) => self.error_response(error).await?,
                 }
             }
             Some(PacketType::TargetPID) => {
-                let packet = C2STargetPidPacket::parse(&msg);
+                let packet = RequestPidRegionsPacket::deserialize(&msg);
                 self.set_target_pid(packet.target_pid);
 
                 match get_regions(packet.target_pid) {
                     Ok(regions) => {
                         self.stream
-                            .write_all(&S2CTargetPidRegionsPacket::out_bytes(regions))
+                            .write_all(&RequestPidRegionsPacketResponse::serialize(regions))
                             .await?;
                     }
                     Err(error) => self.error_response(error).await?,
@@ -114,7 +114,7 @@ impl ClientSession {
             }
             Some(PacketType::SendProcesses) => match get_running_processes() {
                 Ok(processes) => {
-                    let processes_packet = S2CSendProcessesPacket::out_bytes(processes);
+                    let processes_packet = RequestProcessesPacketResponse::serialize(processes);
                     info!("processes: {:?}", processes_packet.len());
                     self.stream
                         .write_all(&processes_packet)

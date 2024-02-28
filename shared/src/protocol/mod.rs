@@ -22,14 +22,14 @@ pub enum PacketType {
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-pub struct C2STargetPidPacket {
+pub struct RequestPidRegionsPacket {
     _type: PacketType,
     pub target_pid: Pid,
 }
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-pub struct C2SGetProcessesPacket {
+pub struct RequestProcessesPacket {
     _type: PacketType,
 }
 
@@ -42,7 +42,7 @@ pub struct ProcessEntry {
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-pub struct S2CSendProcessesPacket {
+pub struct RequestProcessesPacketResponse {
     _type: PacketType,
     #[deku(update = "self.processes.len() as u32")]
     pub count: u32,
@@ -74,7 +74,7 @@ pub struct Region {
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-pub struct S2CTargetPidRegionsPacket {
+pub struct RequestPidRegionsPacketResponse {
     _type: PacketType,
     #[deku(update = "self.regions.len() as u32")]
     pub count: u32,
@@ -111,14 +111,14 @@ impl PacketType {
     }
 }
 
-impl C2STargetPidPacket {
-    pub fn parse(data: &[u8]) -> Self {
-        let (_, value) = C2STargetPidPacket::from_bytes((data, 0)).unwrap();
+impl RequestPidRegionsPacket {
+    pub fn deserialize(data: &[u8]) -> Self {
+        let (_, value) = RequestPidRegionsPacket::from_bytes((data, 0)).unwrap();
         value
     }
 
-    pub fn out_bytes(target_pid: Pid) -> Vec<u8> {
-        let object = C2STargetPidPacket {
+    pub fn serialize(target_pid: Pid) -> Vec<u8> {
+        let object = RequestPidRegionsPacket {
             _type: PacketType::TargetPID,
             target_pid,
         };
@@ -127,14 +127,14 @@ impl C2STargetPidPacket {
 }
 
 
-impl C2SGetProcessesPacket {
-    pub fn parse(data: &[u8]) -> Self {
-        let (_, value) = C2SGetProcessesPacket::from_bytes((data, 0)).unwrap();
+impl RequestProcessesPacket {
+    pub fn deserialize(data: &[u8]) -> Self {
+        let (_, value) = RequestProcessesPacket::from_bytes((data, 0)).unwrap();
         value
     }
 
-    pub fn out_bytes() -> Vec<u8> {
-        let object = C2SGetProcessesPacket {
+    pub fn serialize() -> Vec<u8> {
+        let object = RequestProcessesPacket {
             _type: PacketType::SendProcesses,
         };
         object.to_bytes().unwrap()
@@ -142,14 +142,14 @@ impl C2SGetProcessesPacket {
 }
 
 
-impl S2CTargetPidRegionsPacket {
-    pub fn parse(data: &[u8]) -> Self {
+impl RequestPidRegionsPacketResponse {
+    pub fn deserialize(data: &[u8]) -> Self {
         let decompressed_data = compression::decompress(&data);
-        let (_, value) = S2CTargetPidRegionsPacket::from_bytes((decompressed_data.as_ref(), 0)).unwrap();
+        let (_, value) = RequestPidRegionsPacketResponse::from_bytes((decompressed_data.as_ref(), 0)).unwrap();
         value
     }
-    pub fn out_bytes(regions: Vec<Region>) -> Vec<u8> {
-        let object = S2CTargetPidRegionsPacket {
+    pub fn serialize(regions: Vec<Region>) -> Vec<u8> {
+        let object = RequestPidRegionsPacketResponse {
             _type: PacketType::TargetPID,
             count: regions.len() as u32,
             regions: regions,
@@ -159,15 +159,15 @@ impl S2CTargetPidRegionsPacket {
     }
 }
 
-impl S2CSendProcessesPacket {
-    pub fn parse(data: &[u8]) -> Self {
+impl RequestProcessesPacketResponse {
+    pub fn deserialize(data: &[u8]) -> Self {
         let decompressed_data = compression::decompress(&data);
-        let (_, value) = S2CSendProcessesPacket::from_bytes((decompressed_data.as_ref(), 0)).unwrap();
+        let (_, value) = RequestProcessesPacketResponse::from_bytes((decompressed_data.as_ref(), 0)).unwrap();
         value
     }
 
-    pub fn out_bytes(processes: Vec<ProcessEntry>) -> Vec<u8> {
-        let object = S2CSendProcessesPacket {
+    pub fn serialize(processes: Vec<ProcessEntry>) -> Vec<u8> {
+        let object = RequestProcessesPacketResponse {
             _type: PacketType::SendProcesses,
             count: processes.len() as u32,
             processes: processes,
@@ -182,11 +182,11 @@ mod tests {
 
     #[test]
     fn test_target_pid_packet() {
-        let data = C2STargetPidPacket::out_bytes(1234567890);
-        let packet = C2STargetPidPacket::parse(&data);
+        let data = RequestPidRegionsPacket::serialize(1234567890);
+        let packet = RequestPidRegionsPacket::deserialize(&data);
 
         assert_eq!(
-            C2STargetPidPacket {
+            RequestPidRegionsPacket {
                 _type: PacketType::TargetPID,
                 target_pid: 1234567890,
             },
@@ -219,11 +219,11 @@ mod tests {
                 pathname: EncodedString::new("/home/username/Projects/memflow-web-service/target/debug/memflow-web-service".to_string()),
             },
         ];
-        let data = S2CTargetPidRegionsPacket::out_bytes(test_regions);
-        let parsed_response = S2CTargetPidRegionsPacket::parse(&data);
+        let data = RequestPidRegionsPacketResponse::serialize(test_regions);
+        let parsed_response = RequestPidRegionsPacketResponse::deserialize(&data);
 
         assert_eq!(
-            S2CTargetPidRegionsPacket {
+            RequestPidRegionsPacketResponse {
                 _type: PacketType::TargetPID,
                 count: 2,
                 regions: vec![
@@ -267,11 +267,11 @@ mod tests {
             },
         ];
 
-        let data = S2CSendProcessesPacket::out_bytes(test_processes);
-        let packet = S2CSendProcessesPacket::parse(&data);
+        let data = RequestProcessesPacketResponse::serialize(test_processes);
+        let packet = RequestProcessesPacketResponse::deserialize(&data);
 
         assert_eq!(
-            S2CSendProcessesPacket {
+            RequestProcessesPacketResponse {
                 _type: PacketType::SendProcesses,
                 count: 2,
                 processes: vec![

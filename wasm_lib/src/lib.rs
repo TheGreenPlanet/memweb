@@ -25,11 +25,11 @@ pub fn parse_payload_to_string(msg: &[u8]) -> String {
             format!("ReadI64: {}", packet.value)
         }
         Some(PacketType::Write) => {
-            let packet = S2CWriteMemoryPacketResponse::parse(&msg);
+            let packet = ReceiveWriteVecMemoryPacketResponse::parse(&msg);
             format!("Write: bytes written: {}", packet.bytes_written)
         }
         Some(PacketType::TargetPID) => {
-            let packet = S2CTargetPidRegionsPacket::parse(&msg);
+            let packet = RequestPidRegionsPacketResponse::deserialize(&msg);
             let regions_string = packet.regions.iter().fold(String::new(), |acc, region| {
                 acc + &format!("Start: {}, End: {}, Size: {}, Permissions: {}, Offset: {}, Device: {}, Inode: {}, Pathname: {}\n", region.start, region.end, region.size, region.permissions, region.offset, region.device.to_string(), region.inode, region.pathname.to_string())
             });
@@ -39,7 +39,7 @@ pub fn parse_payload_to_string(msg: &[u8]) -> String {
             )
         }
         Some(PacketType::SendProcesses) => {
-            let packet = S2CSendProcessesPacket::parse(&msg);
+            let packet = RequestProcessesPacketResponse::deserialize(&msg);
             let processes = packet.processes.iter().fold(String::new(), |acc, process| {
                 acc + &format!("Pid: {}, Name: {}\n", process.pid, process.name.to_string())
             });
@@ -56,7 +56,7 @@ pub fn parse_payload_to_string(msg: &[u8]) -> String {
 
 #[wasm_bindgen]
 pub fn target_pid_packet_data(pid: i32) -> Vec<u8> {
-    C2STargetPidPacket::out_bytes(pid)
+    RequestPidRegionsPacket::serialize(pid)
 }
 
 #[wasm_bindgen]
@@ -76,10 +76,10 @@ pub fn read_memory_i64_packet_data(address: u64, size: u8) -> Vec<u8> {
 
 #[wasm_bindgen]
 pub fn write_memory_packet_data(address: u64, bytes: &[u8]) -> Vec<u8> {
-    C2SWriteMemoryPacket::out_bytes(address, bytes.to_vec())
+    RequestWriteVecMemoryPacket::serialize(address, bytes.to_vec())
 }
 
 #[wasm_bindgen]
 pub fn get_processes_packet_data() -> Vec<u8> {
-    C2SGetProcessesPacket::out_bytes()
+    RequestProcessesPacket::serialize()
 }
