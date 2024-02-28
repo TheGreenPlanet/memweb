@@ -3,4 +3,5 @@ pub mod compression;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod process;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod helpers;
