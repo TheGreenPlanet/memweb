@@ -1,6 +1,5 @@
 use procfs::{*, process::{Process, MMapPath}};
 
-
 use crate::protocol::{Region, ProcessEntry, EncodedString};
 
 pub fn get_regions(pid: i32) -> std::io::Result<Vec<Region>> {
