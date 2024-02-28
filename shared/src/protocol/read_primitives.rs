@@ -12,10 +12,26 @@ pub struct RequestReadVecMemoryPacket {
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
+pub struct ReceiveReadVecPacketResponse {
+    _type: PacketType,
+    pub count: u32,
+    #[deku(count = "count")]
+    pub data: Vec<u8>,
+}
+
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "big")]
 pub struct RequestReadU64MemoryPacket {
     _type: PacketType,
     pub address: u64,
     pub size: u8,
+}
+
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "big")]
+pub struct ReceiveReadU64PacketResponse {
+    _type: PacketType,
+    pub value: u64,
 }
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
@@ -28,27 +44,28 @@ pub struct RequestReadI64MemoryPacket {
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
-pub struct ReceiveReadVecPacketResponse {
-    _type: PacketType,
-    pub count: u32,
-    #[deku(count = "count")]
-    pub data: Vec<u8>,
-}
-
-#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
-#[deku(endian = "big")]
-pub struct ReceiveReadU64PacketResponse {
-    _type: PacketType,
-    pub value: u64,
-}
-
-
-#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
-#[deku(endian = "big")]
 pub struct ReceiveReadI64PacketResponse {
     _type: PacketType,
     pub value: i64,
 }
+
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "big")]
+pub struct RequestReadVecF32MemoryPacket {
+    _type: PacketType,
+    pub address: u64,
+    pub count: u8,
+}
+
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "big")]
+pub struct ReceiveReadVecF32PacketResponse {
+    _type: PacketType,
+    pub count: u32,
+    #[deku(count = "count")]
+    pub data: Vec<f32>,
+}
+
 
 impl RequestReadVecMemoryPacket {
     pub fn deserialize(data: &[u8]) -> Self {
@@ -114,6 +131,38 @@ impl ReceiveReadVecPacketResponse {
     }
 }
 
+impl RequestReadVecF32MemoryPacket {
+    pub fn deserialize(data: &[u8]) -> Self {
+        let (_, value) = RequestReadVecF32MemoryPacket::from_bytes((data, 0)).unwrap();
+        value
+    }
+
+    pub fn serialize(address: u64, count: u8) -> Vec<u8> {
+        let object = RequestReadVecF32MemoryPacket {
+            _type: PacketType::ReadVecF32,
+            address,
+            count,
+        };
+        object.to_bytes().unwrap()
+    }
+}
+
+impl ReceiveReadVecF32PacketResponse {
+    pub fn deserialize(data: &[u8]) -> Self {
+        let (_, value) = ReceiveReadVecF32PacketResponse::from_bytes((data, 0)).unwrap();
+        value
+    }
+
+    pub fn serialize(data: Vec<f32>) -> Vec<u8> {
+        let object = ReceiveReadVecF32PacketResponse {
+            _type: PacketType::ReadVecF32,
+            count: data.len() as u32,
+            data,
+        };
+        object.to_bytes().unwrap()
+    }
+}
+
 impl ReceiveReadU64PacketResponse {
     pub fn deserialize(data: &[u8]) -> Self {
         let (_, value) = ReceiveReadU64PacketResponse::from_bytes((data, 0)).unwrap();
@@ -150,7 +199,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_read_memory_packet() {
+    fn test_read_vec_memory_packet() {
         let data = RequestReadVecMemoryPacket::serialize(1337, 100);
         let packet = RequestReadVecMemoryPacket::deserialize(&data);
 
@@ -165,7 +214,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_memory_packet_response() {
+    fn test_read_vec_memory_packet_response() {
         let test_payload = vec![255, 100, 50, 25, 10];
 
         let response_data = ReceiveReadVecPacketResponse::serialize(test_payload);
@@ -176,6 +225,38 @@ mod tests {
                 _type: PacketType::ReadVec,
                 count: 5,
                 data: vec![255, 100, 50, 25, 10],
+            },
+            parsed_response
+        );
+    }
+
+    #[test]
+    fn test_read_vec_f32_memory_packet() {
+        let data = RequestReadVecF32MemoryPacket::serialize(1337, 3);
+        let packet = RequestReadVecF32MemoryPacket::deserialize(&data);
+
+        assert_eq!(
+            RequestReadVecF32MemoryPacket {
+                _type: PacketType::ReadVecF32,
+                address: 1337,
+                count: 3,
+            },
+            packet
+        );
+    }
+
+    #[test]
+    fn test_read_vec_f32_memory_packet_response() {
+        let test_payload = vec![0.00032, 0.00064, 0.000128];
+
+        let response_data = ReceiveReadVecF32PacketResponse::serialize(test_payload);
+        let parsed_response = ReceiveReadVecF32PacketResponse::deserialize(&response_data);
+
+        assert_eq!(
+            ReceiveReadVecF32PacketResponse {
+                _type: PacketType::ReadVecF32,
+                count: 3,
+                data: vec![0.00032, 0.00064, 0.000128],
             },
             parsed_response
         );

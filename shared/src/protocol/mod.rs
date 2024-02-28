@@ -13,6 +13,7 @@ type Pid = i32;
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")] // context passed from `DekuTest` top-level endian
 pub enum PacketType {
     ReadVec = 0,
+    ReadVecF32,
     ReadU64,
     ReadI64,
     Write,
@@ -101,11 +102,12 @@ impl PacketType {
     pub fn from_u8(value: u8) -> Option<Self> {
         match value {
             0 => Some(Self::ReadVec),
-            1 => Some(Self::ReadU64),
-            2 => Some(Self::ReadI64),
-            3 => Some(Self::Write),
-            4 => Some(Self::TargetPID),
-            5 => Some(Self::SendProcesses),
+            1 => Some(Self::ReadVecF32),
+            2 => Some(Self::ReadU64),
+            3 => Some(Self::ReadI64),
+            4 => Some(Self::Write),
+            5 => Some(Self::TargetPID),
+            6 => Some(Self::SendProcesses),
             _ => None,
         }
     }

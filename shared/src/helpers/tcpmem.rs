@@ -39,6 +39,16 @@ impl<'a> TCPMemory<'a> {
         }
     }
 
+    pub async fn read_vec_f32(&mut self, address: u64, count: u8) -> io::Result<Vec<f32>> {
+        let response = send_packet(
+            self.stream,
+            RequestReadVecF32MemoryPacket::serialize(address, count),
+        )
+        .await?;
+        // Construct UResult based on width_bytes
+        Ok(ReceiveReadVecF32PacketResponse::deserialize(&response).data)
+    }
+
     pub async fn read_vec(&mut self, address: u64, size: u32) -> io::Result<Vec<u8>> {
         let response = send_packet(
             self.stream,
