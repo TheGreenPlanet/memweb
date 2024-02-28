@@ -22,7 +22,7 @@ impl MemWeb<'_> {
         Ok(processes.processes)
     }
 
-    pub async fn get_pid_regions(&mut self, pid: i32) -> io::Result<Vec<Region>> {
+    pub async fn get_regions(&mut self, pid: i32) -> io::Result<Vec<Region>> {
         let data = self.send_packet_big_read(RequestPidRegionsPacket::serialize(pid)).await?;
         if data.len() == 0 {
             panic!("Region list is empty!")
