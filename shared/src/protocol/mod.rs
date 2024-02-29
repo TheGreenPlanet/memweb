@@ -8,6 +8,7 @@ pub mod write_primitives;
 
 type Pid = i32;
 
+
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(type = "u8")]
 #[deku(endian = "endian", ctx = "endian: deku::ctx::Endian")] // context passed from `DekuTest` top-level endian
@@ -19,6 +20,46 @@ pub enum PacketType {
     Write,
     TargetPID,
     SendProcesses,
+    Error,
+}
+
+impl PacketType {
+    pub fn from_u8(value: u8) -> Option<Self> {
+        match value {
+            0 => Some(Self::ReadVec),
+            1 => Some(Self::ReadVecF32),
+            2 => Some(Self::ReadU64),
+            3 => Some(Self::ReadI64),
+            4 => Some(Self::Write),
+            5 => Some(Self::TargetPID),
+            6 => Some(Self::SendProcesses),
+            7 => Some(Self::Error),
+            _ => None,
+        }
+    }
+}
+
+
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "big")]
+pub struct ErrorPacket {
+    _type: PacketType,
+    pub message: EncodedString,
+}
+
+impl ErrorPacket {
+    pub fn serialize(message: String) -> Vec<u8> {
+        let object = ErrorPacket {
+            _type: PacketType::Error,
+            message: EncodedString::new(message),
+        };
+        object.to_bytes().unwrap()
+    }
+
+    pub fn deserialize(data: &[u8]) -> Self {
+        let (_, value) = ErrorPacket::from_bytes((data, 0)).unwrap();
+        value
+    }
 }
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
@@ -98,20 +139,7 @@ impl EncodedString {
 }
 
 
-impl PacketType {
-    pub fn from_u8(value: u8) -> Option<Self> {
-        match value {
-            0 => Some(Self::ReadVec),
-            1 => Some(Self::ReadVecF32),
-            2 => Some(Self::ReadU64),
-            3 => Some(Self::ReadI64),
-            4 => Some(Self::Write),
-            5 => Some(Self::TargetPID),
-            6 => Some(Self::SendProcesses),
-            _ => None,
-        }
-    }
-}
+
 
 impl RequestPidRegionsPacket {
     pub fn deserialize(data: &[u8]) -> Self {
@@ -286,6 +314,20 @@ mod tests {
                         pid: 0987654321,
                     },
                 ],
+            },
+            packet
+        );
+    }
+
+    #[test]
+    fn test_error_packet() {
+        let data = ErrorPacket::serialize("Error message".to_string());
+        let packet = ErrorPacket::deserialize(&data);
+
+        assert_eq!(
+            ErrorPacket {
+                _type: PacketType::Error,
+                message: EncodedString::new("Error message".to_string()),
             },
             packet
         );

@@ -33,9 +33,9 @@ impl ClientSession {
     }
 
     async fn error_response(&mut self, err: io::Error) -> Result<(), io::Error> {
-        let error_message = format!("Error: {}", err);
-        error!("{}", error_message);
-        self.stream.write_all(error_message.as_bytes()).await // Await the async write operation
+        error!("{}", err.to_string());
+        let error_message = ErrorPacket::serialize(err.to_string());
+        self.stream.write_all(&error_message).await // Await the async write operation
     }
 
     pub async fn handle_message(&mut self) -> Result<(), io::Error> {
@@ -52,7 +52,7 @@ impl ClientSession {
 
         match PacketType::from_u8(msg[0]) {
             Some(PacketType::ReadVec) => {
-                let packet = RequestReadVecMemoryPacket::deserialize(&msg);
+                let packet = RequestReadVecMemoryPacket::deserialize(&msg)?;
 
                 match self.memory.read_vec(packet.address, packet.size as usize) {
                     Ok(result) => {
@@ -64,7 +64,7 @@ impl ClientSession {
                 }
             }
             Some(PacketType::ReadVecF32) => {
-                let packet = RequestReadVecF32MemoryPacket::deserialize(&msg);
+                let packet = RequestReadVecF32MemoryPacket::deserialize(&msg)?;
 
                 match self.memory.read_vec_f32(packet.address, packet.count as usize) {
                     Ok(result) => {
@@ -76,7 +76,7 @@ impl ClientSession {
                 }
             }
             Some(PacketType::ReadU64) => {
-                let packet = RequestReadU64MemoryPacket::deserialize(&msg);
+                let packet = RequestReadU64MemoryPacket::deserialize(&msg)?;
 
                 match self.memory.read_u64(packet.address, packet.size as usize) {
                     Ok(result) => {
@@ -88,7 +88,7 @@ impl ClientSession {
                 }
             }
             Some(PacketType::ReadI64) => {
-                let packet = RequestReadI64MemoryPacket::deserialize(&msg);
+                let packet = RequestReadI64MemoryPacket::deserialize(&msg)?;
 
                 match self.memory.read_i64(packet.address, packet.size as usize) {
                     Ok(result) => {
@@ -100,7 +100,7 @@ impl ClientSession {
                 }
             }
             Some(PacketType::Write) => {
-                let packet = RequestWriteVecMemoryPacket::deserialize(&msg);
+                let packet = RequestWriteVecMemoryPacket::deserialize(&msg)?;
 
                 match self.memory.write(packet.address, &packet.bytes) {
                     Ok(result) => {
@@ -112,7 +112,7 @@ impl ClientSession {
                 }
             }
             Some(PacketType::TargetPID) => {
-                let packet = RequestPidRegionsPacket::deserialize(&msg);
+                let packet = RequestPidRegionsPacket::deserialize(&msg)?;
                 self.set_target_pid(packet.target_pid);
 
                 match get_regions(packet.target_pid) {

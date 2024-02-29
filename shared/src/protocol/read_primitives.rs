@@ -1,6 +1,7 @@
-use deku::prelude::*;
-use super::PacketType;
+use std::{default, io};
 
+use super::{ErrorPacket, PacketType};
+use deku::prelude::*;
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
@@ -66,11 +67,27 @@ pub struct ReceiveReadVecF32PacketResponse {
     pub data: Vec<f32>,
 }
 
-
 impl RequestReadVecMemoryPacket {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = RequestReadVecMemoryPacket::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::ReadVec => {
+                let (_, value) = RequestReadVecMemoryPacket::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(address: u64, size: u32) -> Vec<u8> {
@@ -84,9 +101,26 @@ impl RequestReadVecMemoryPacket {
 }
 
 impl RequestReadU64MemoryPacket {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = RequestReadU64MemoryPacket::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::ReadU64 => {
+                let (_, value) = RequestReadU64MemoryPacket::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(address: u64, size: u8) -> Vec<u8> {
@@ -100,9 +134,26 @@ impl RequestReadU64MemoryPacket {
 }
 
 impl RequestReadI64MemoryPacket {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = RequestReadI64MemoryPacket::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::ReadI64 => {
+                let (_, value) = RequestReadI64MemoryPacket::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(address: u64, size: u8) -> Vec<u8> {
@@ -116,9 +167,26 @@ impl RequestReadI64MemoryPacket {
 }
 
 impl ReceiveReadVecPacketResponse {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = ReceiveReadVecPacketResponse::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::ReadVec => {
+                let (_, value) = ReceiveReadVecPacketResponse::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(data: Vec<u8>) -> Vec<u8> {
@@ -132,9 +200,26 @@ impl ReceiveReadVecPacketResponse {
 }
 
 impl RequestReadVecF32MemoryPacket {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = RequestReadVecF32MemoryPacket::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::ReadVecF32 => {
+                let (_, value) = RequestReadVecF32MemoryPacket::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(address: u64, count: u8) -> Vec<u8> {
@@ -148,9 +233,26 @@ impl RequestReadVecF32MemoryPacket {
 }
 
 impl ReceiveReadVecF32PacketResponse {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = ReceiveReadVecF32PacketResponse::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::ReadVecF32 => {
+                let (_, value) = ReceiveReadVecF32PacketResponse::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(data: Vec<f32>) -> Vec<u8> {
@@ -164,9 +266,26 @@ impl ReceiveReadVecF32PacketResponse {
 }
 
 impl ReceiveReadU64PacketResponse {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = ReceiveReadU64PacketResponse::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::ReadU64 => {
+                let (_, value) = ReceiveReadU64PacketResponse::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(value: u64) -> Vec<u8> {
@@ -178,11 +297,27 @@ impl ReceiveReadU64PacketResponse {
     }
 }
 
-
 impl ReceiveReadI64PacketResponse {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = ReceiveReadI64PacketResponse::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::ReadI64 => {
+                let (_, value) = ReceiveReadI64PacketResponse::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(value: i64) -> Vec<u8> {
@@ -201,7 +336,7 @@ mod tests {
     #[test]
     fn test_read_vec_memory_packet() {
         let data = RequestReadVecMemoryPacket::serialize(1337, 100);
-        let packet = RequestReadVecMemoryPacket::deserialize(&data);
+        let packet = RequestReadVecMemoryPacket::deserialize(&data).unwrap();
 
         assert_eq!(
             RequestReadVecMemoryPacket {
@@ -218,7 +353,7 @@ mod tests {
         let test_payload = vec![255, 100, 50, 25, 10];
 
         let response_data = ReceiveReadVecPacketResponse::serialize(test_payload);
-        let parsed_response = ReceiveReadVecPacketResponse::deserialize(&response_data);
+        let parsed_response = ReceiveReadVecPacketResponse::deserialize(&response_data).unwrap();
 
         assert_eq!(
             ReceiveReadVecPacketResponse {
@@ -233,7 +368,7 @@ mod tests {
     #[test]
     fn test_read_vec_f32_memory_packet() {
         let data = RequestReadVecF32MemoryPacket::serialize(1337, 3);
-        let packet = RequestReadVecF32MemoryPacket::deserialize(&data);
+        let packet = RequestReadVecF32MemoryPacket::deserialize(&data).unwrap();
 
         assert_eq!(
             RequestReadVecF32MemoryPacket {
@@ -250,7 +385,7 @@ mod tests {
         let test_payload = vec![0.00032, 0.00064, 0.000128];
 
         let response_data = ReceiveReadVecF32PacketResponse::serialize(test_payload);
-        let parsed_response = ReceiveReadVecF32PacketResponse::deserialize(&response_data);
+        let parsed_response = ReceiveReadVecF32PacketResponse::deserialize(&response_data).unwrap();
 
         assert_eq!(
             ReceiveReadVecF32PacketResponse {
@@ -265,7 +400,7 @@ mod tests {
     #[test]
     fn test_read_u64_memory_packet() {
         let data = RequestReadU64MemoryPacket::serialize(1337, 8);
-        let packet = RequestReadU64MemoryPacket::deserialize(&data);
+        let packet = RequestReadU64MemoryPacket::deserialize(&data).unwrap();
 
         assert_eq!(
             RequestReadU64MemoryPacket {
@@ -279,10 +414,9 @@ mod tests {
 
     #[test]
     fn test_read_u64_memory_packet_response() {
-        
         let byte: u8 = 0xFF;
         let response_data = ReceiveReadU64PacketResponse::serialize(byte as u64);
-        let res = ReceiveReadU64PacketResponse::deserialize(&response_data);
+        let res = ReceiveReadU64PacketResponse::deserialize(&response_data).unwrap();
 
         assert_eq!(res.value as u8, byte);
 
@@ -298,7 +432,7 @@ mod tests {
     #[test]
     fn test_read_i64_memory_packet() {
         let data = RequestReadI64MemoryPacket::serialize(1337, 8);
-        let packet = RequestReadI64MemoryPacket::deserialize(&data);
+        let packet = RequestReadI64MemoryPacket::deserialize(&data).unwrap();
 
         assert_eq!(
             RequestReadI64MemoryPacket {
@@ -312,10 +446,9 @@ mod tests {
 
     #[test]
     fn test_read_i64_memory_packet_response_smallest() {
-        
         let byte: i8 = -128;
         let response_data = ReceiveReadI64PacketResponse::serialize(byte as i64);
-        let res = ReceiveReadI64PacketResponse::deserialize(&response_data);
+        let res = ReceiveReadI64PacketResponse::deserialize(&response_data).unwrap();
 
         assert_eq!(res.value as i8, byte);
 
@@ -330,10 +463,9 @@ mod tests {
 
     #[test]
     fn test_read_i64_memory_packet_response_largest() {
-        
         let byte: i8 = 127;
         let response_data = ReceiveReadI64PacketResponse::serialize(byte as i64);
-        let res = ReceiveReadI64PacketResponse::deserialize(&response_data);
+        let res = ReceiveReadI64PacketResponse::deserialize(&response_data).unwrap();
 
         assert_eq!(res.value as i8, byte);
 

@@ -12,8 +12,16 @@ pub fn parse_payload_to_string(msg: &[u8]) -> String {
         return "Empty message".to_string();
     }
     match PacketType::from_u8(msg[0]) {
+        Some(PacketType::Error) => {
+            let packet = ErrorPacket::deserialize(&msg);
+            format!("Error: {}", packet.message.to_string())
+        }
         Some(PacketType::ReadVec) => {
             let packet = ReceiveReadVecPacketResponse::deserialize(&msg);
+            format!("Read: count: {}, data: {:?}", packet.count, packet.data)
+        }
+        Some(PacketType::ReadVecF32) => {
+            let packet = ReceiveReadVecF32PacketResponse::deserialize(&msg);
             format!("Read: count: {}, data: {:?}", packet.count, packet.data)
         }
         Some(PacketType::ReadU64) => {

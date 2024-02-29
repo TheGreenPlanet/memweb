@@ -46,7 +46,7 @@ impl<'a> TCPMemory<'a> {
         )
         .await?;
         // Construct UResult based on width_bytes
-        Ok(ReceiveReadVecF32PacketResponse::deserialize(&response).data)
+        Ok(ReceiveReadVecF32PacketResponse::deserialize(&response).unwrap().data)
     }
 
     pub async fn read_vec(&mut self, address: u64, size: u32) -> io::Result<Vec<u8>> {

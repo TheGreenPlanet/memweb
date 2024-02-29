@@ -1,5 +1,7 @@
+use std::io;
+
 use deku::prelude::*;
-use super::PacketType;
+use super::{PacketType, ErrorPacket};
 
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "big")]
@@ -21,9 +23,26 @@ pub struct RequestWriteVecMemoryPacketResponse {
 
 
 impl RequestWriteVecMemoryPacket {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = RequestWriteVecMemoryPacket::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::Write => {
+                let (_, value) = RequestWriteVecMemoryPacket::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(address: u64, bytes: Vec<u8>) -> Vec<u8> {
@@ -38,9 +57,26 @@ impl RequestWriteVecMemoryPacket {
 }
 
 impl RequestWriteVecMemoryPacketResponse {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = RequestWriteVecMemoryPacketResponse::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::Write => {
+                let (_, value) = RequestWriteVecMemoryPacketResponse::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
     pub fn serialize(bytes_written: u64) -> Vec<u8> {
         let object = RequestWriteVecMemoryPacketResponse {
@@ -58,7 +94,7 @@ mod tests {
     #[test]
     fn test_write_memory_packet() {
         let data = RequestWriteVecMemoryPacket::serialize(1337, vec![123, 255]);
-        let packet = RequestWriteVecMemoryPacket::deserialize(&data);
+        let packet = RequestWriteVecMemoryPacket::deserialize(&data).unwrap();
 
         assert_eq!(
             RequestWriteVecMemoryPacket {
@@ -75,7 +111,7 @@ mod tests {
     fn test_write_memory_packet_response() {
         const BYTES_WRITTEN: u64 = 100;
         let response_data = RequestWriteVecMemoryPacketResponse::serialize(BYTES_WRITTEN);
-        let parsed_response = RequestWriteVecMemoryPacketResponse::deserialize(&response_data);
+        let parsed_response = RequestWriteVecMemoryPacketResponse::deserialize(&response_data).unwrap();
 
         assert_eq!(
             RequestWriteVecMemoryPacketResponse {
