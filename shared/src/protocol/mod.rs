@@ -1,4 +1,6 @@
 #![allow(non_snake_case)]
+use std::io;
+
 use deku::prelude::*;
 use crate::compression;
 
@@ -142,9 +144,26 @@ impl EncodedString {
 
 
 impl RequestPidRegionsPacket {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let (_, value) = RequestPidRegionsPacket::from_bytes((data, 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let packet_type = PacketType::from_u8(data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::TargetPID => {
+                let (_, value) = RequestPidRegionsPacket::from_bytes((data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(target_pid: Pid) -> Vec<u8> {
@@ -173,10 +192,27 @@ impl RequestProcessesPacket {
 
 
 impl RequestPidRegionsPacketResponse {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let decompressed_data = compression::decompress(&data);
-        let (_, value) = RequestPidRegionsPacketResponse::from_bytes((decompressed_data.as_ref(), 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let decompressed_data = compression::decompress(data);
+        let packet_type = PacketType::from_u8(decompressed_data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::TargetPID => {
+                let (_, value) = RequestPidRegionsPacketResponse::from_bytes((&decompressed_data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&decompressed_data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
     pub fn serialize(regions: Vec<Region>) -> Vec<u8> {
         let object = RequestPidRegionsPacketResponse {
@@ -190,10 +226,27 @@ impl RequestPidRegionsPacketResponse {
 }
 
 impl RequestProcessesPacketResponse {
-    pub fn deserialize(data: &[u8]) -> Self {
-        let decompressed_data = compression::decompress(&data);
-        let (_, value) = RequestProcessesPacketResponse::from_bytes((decompressed_data.as_ref(), 0)).unwrap();
-        value
+    pub fn deserialize(data: &[u8]) -> Result<Self, io::Error> {
+        let decompressed_data = compression::decompress(data);
+        let packet_type = PacketType::from_u8(decompressed_data[0])
+            .ok_or(io::Error::new(io::ErrorKind::Other, "Invalid packet type"))?;
+        match packet_type {
+            PacketType::SendProcesses => {
+                let (_, value) = RequestProcessesPacketResponse::from_bytes((&decompressed_data, 0)).unwrap();
+                Ok(value)
+            }
+            PacketType::Error => {
+                let packet = ErrorPacket::deserialize(&decompressed_data);
+                Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    packet.message.to_string(),
+                ))
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Incorrect packet type".to_string(),
+            )),
+        }
     }
 
     pub fn serialize(processes: Vec<ProcessEntry>) -> Vec<u8> {
@@ -213,7 +266,7 @@ mod tests {
     #[test]
     fn test_target_pid_packet() {
         let data = RequestPidRegionsPacket::serialize(1234567890);
-        let packet = RequestPidRegionsPacket::deserialize(&data);
+        let packet = RequestPidRegionsPacket::deserialize(&data).unwrap();
 
         assert_eq!(
             RequestPidRegionsPacket {
@@ -250,7 +303,7 @@ mod tests {
             },
         ];
         let data = RequestPidRegionsPacketResponse::serialize(test_regions);
-        let parsed_response = RequestPidRegionsPacketResponse::deserialize(&data);
+        let parsed_response = RequestPidRegionsPacketResponse::deserialize(&data).unwrap();
 
         assert_eq!(
             RequestPidRegionsPacketResponse {
@@ -298,7 +351,7 @@ mod tests {
         ];
 
         let data = RequestProcessesPacketResponse::serialize(test_processes);
-        let packet = RequestProcessesPacketResponse::deserialize(&data);
+        let packet = RequestProcessesPacketResponse::deserialize(&data).unwrap();
 
         assert_eq!(
             RequestProcessesPacketResponse {

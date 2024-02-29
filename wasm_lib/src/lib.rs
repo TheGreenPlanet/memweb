@@ -17,27 +17,27 @@ pub fn parse_payload_to_string(msg: &[u8]) -> String {
             format!("Error: {}", packet.message.to_string())
         }
         Some(PacketType::ReadVec) => {
-            let packet = ReceiveReadVecPacketResponse::deserialize(&msg);
+            let packet = ReceiveReadVecPacketResponse::deserialize(&msg).unwrap();
             format!("Read: count: {}, data: {:?}", packet.count, packet.data)
         }
         Some(PacketType::ReadVecF32) => {
-            let packet = ReceiveReadVecF32PacketResponse::deserialize(&msg);
+            let packet = ReceiveReadVecF32PacketResponse::deserialize(&msg).unwrap();
             format!("Read: count: {}, data: {:?}", packet.count, packet.data)
         }
         Some(PacketType::ReadU64) => {
-            let packet = ReceiveReadU64PacketResponse::deserialize(&msg);
+            let packet = ReceiveReadU64PacketResponse::deserialize(&msg).unwrap();
             format!("ReadU64: {}", packet.value)
         }
         Some(PacketType::ReadI64) => {
-            let packet = ReceiveReadI64PacketResponse::deserialize(&msg);
+            let packet = ReceiveReadI64PacketResponse::deserialize(&msg).unwrap();
             format!("ReadI64: {}", packet.value)
         }
         Some(PacketType::Write) => {
-            let packet = RequestWriteVecMemoryPacketResponse::deserialize(&msg);
+            let packet = RequestWriteVecMemoryPacketResponse::deserialize(&msg).unwrap();
             format!("Write: bytes written: {}", packet.bytes_written)
         }
         Some(PacketType::TargetPID) => {
-            let packet = RequestPidRegionsPacketResponse::deserialize(&msg);
+            let packet = RequestPidRegionsPacketResponse::deserialize(&msg).unwrap();
             let regions_string = packet.regions.iter().fold(String::new(), |acc, region| {
                 acc + &format!("Start: {}, End: {}, Size: {}, Permissions: {}, Offset: {}, Device: {}, Inode: {}, Pathname: {}\n", region.start, region.end, region.size, region.permissions, region.offset, region.device.to_string(), region.inode, region.pathname.to_string())
             });
@@ -47,7 +47,7 @@ pub fn parse_payload_to_string(msg: &[u8]) -> String {
             )
         }
         Some(PacketType::SendProcesses) => {
-            let packet = RequestProcessesPacketResponse::deserialize(&msg);
+            let packet = RequestProcessesPacketResponse::deserialize(&msg).unwrap();
             let processes = packet.processes.iter().fold(String::new(), |acc, process| {
                 acc + &format!("Pid: {}, Name: {}\n", process.pid, process.name.to_string())
             });
