@@ -51,6 +51,10 @@ impl<'a> TCPMemory<'a> {
         Ok(ReceiveReadVecF32PacketResponse::deserialize(&response).unwrap().data)
     }
 
+    pub async fn read_f32(&mut self, address: u64) -> io::Result<f32> {
+        Ok(self.read_vec_f32(address, 1).await?[0])
+    }
+
     pub async fn read_vec(&mut self, address: u64, size: u32) -> io::Result<Vec<u8>> {
         let response = send_packet(
             self.stream,
@@ -58,7 +62,7 @@ impl<'a> TCPMemory<'a> {
         )
         .await?;
         // Construct UResult based on width_bytes
-        Ok(ReceiveReadVecPacketResponse::deserialize(&response).data)
+        Ok(ReceiveReadVecPacketResponse::deserialize(&response).unwrap().data)
     }
 
     async fn read_unsigned(&mut self, address: u64, width_bytes: u8) -> io::Result<UResult> {
@@ -68,7 +72,7 @@ impl<'a> TCPMemory<'a> {
         )
         .await?;
 
-        let value = ReceiveReadU64PacketResponse::deserialize(&response).value;
+        let value = ReceiveReadU64PacketResponse::deserialize(&response).unwrap().value;
 
         // Construct UResult based on width_bytes
         Ok(match width_bytes {
@@ -87,7 +91,7 @@ impl<'a> TCPMemory<'a> {
         )
         .await?;
 
-        let value = ReceiveReadI64PacketResponse::deserialize(&response).value;
+        let value = ReceiveReadI64PacketResponse::deserialize(&response).unwrap().value;
 
         // Construct IResult based on width_bytes
         Ok(match width_bytes {
@@ -173,6 +177,6 @@ impl<'a> TCPMemory<'a> {
             RequestWriteVecMemoryPacket::serialize(address, data),
         )
         .await?;
-        Ok(RequestWriteVecMemoryPacketResponse::deserialize(&response).bytes_written)
+        Ok(RequestWriteVecMemoryPacketResponse::deserialize(&response).unwrap().bytes_written)
     }
 }

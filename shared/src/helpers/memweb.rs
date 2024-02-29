@@ -18,7 +18,7 @@ impl<'a> MemWeb<'a> {
             panic!("Process list is empty!")
         }
 
-        let processes = RequestProcessesPacketResponse::deserialize(&data);
+        let processes = RequestProcessesPacketResponse::deserialize(&data).unwrap();
         Ok(processes.processes)
     }
 
@@ -28,7 +28,7 @@ impl<'a> MemWeb<'a> {
             panic!("Region list is empty!")
         }
 
-        let regions = RequestPidRegionsPacketResponse::deserialize(&data);
+        let regions = RequestPidRegionsPacketResponse::deserialize(&data).unwrap();
         Ok(regions.regions)
     }
 
