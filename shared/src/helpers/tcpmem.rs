@@ -1,11 +1,10 @@
 use std::string::FromUtf8Error;
 
 #[allow(dead_code)]
-
 use crate::protocol::{read_primitives::*, write_primitives::*};
+use std::convert::TryInto;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
-
+use tokio::net::TcpStream; // Make sure this is in scope
 
 async fn send_packet(stream: &mut TcpStream, packet: Vec<u8>) -> io::Result<Vec<u8>> {
     stream.write_all(&packet).await?;
@@ -36,9 +35,7 @@ union IResult {
 
 impl<'a> TCPMemory<'a> {
     pub fn new(stream: &'a mut TcpStream) -> TCPMemory<'a> {
-        TCPMemory {
-            stream,
-        }
+        TCPMemory { stream }
     }
 
     pub async fn read_vec_f32(&mut self, address: u64, count: u8) -> io::Result<Vec<f32>> {
@@ -48,7 +45,29 @@ impl<'a> TCPMemory<'a> {
         )
         .await?;
         // Construct UResult based on width_bytes
-        Ok(ReceiveReadVecF32PacketResponse::deserialize(&response).unwrap().data)
+        Ok(ReceiveReadVecF32PacketResponse::deserialize(&response)
+            .unwrap()
+            .data)
+    }
+
+    pub async fn read_matrix(&mut self, address: u64) -> io::Result<[f32; 16]> {
+        let res = self.read_vec_f32(address, 16).await?;
+        res.as_slice().try_into().map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                "Failed to convert Vec<f32> to [f32; 16]",
+            )
+        })
+    }
+
+    pub async fn read_vec3(&mut self, address: u64) -> io::Result<[f32; 3]> {
+        let res = self.read_vec_f32(address, 3).await?;
+        res.as_slice().try_into().map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                "Failed to convert Vec<f32> to [f32; 3]",
+            )
+        })
     }
 
     pub async fn read_f32(&mut self, address: u64) -> io::Result<f32> {
@@ -62,7 +81,9 @@ impl<'a> TCPMemory<'a> {
         )
         .await?;
         // Construct UResult based on width_bytes
-        Ok(ReceiveReadVecPacketResponse::deserialize(&response).unwrap().data)
+        Ok(ReceiveReadVecPacketResponse::deserialize(&response)
+            .unwrap()
+            .data)
     }
 
     async fn read_unsigned(&mut self, address: u64, width_bytes: u8) -> io::Result<UResult> {
@@ -72,7 +93,9 @@ impl<'a> TCPMemory<'a> {
         )
         .await?;
 
-        let value = ReceiveReadU64PacketResponse::deserialize(&response).unwrap().value;
+        let value = ReceiveReadU64PacketResponse::deserialize(&response)
+            .unwrap()
+            .value;
 
         // Construct UResult based on width_bytes
         Ok(match width_bytes {
@@ -80,7 +103,12 @@ impl<'a> TCPMemory<'a> {
             2 => UResult { u16: value as u16 },
             4 => UResult { u32: value as u32 },
             8 => UResult { u64: value },
-            _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported byte width")),
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Unsupported byte width",
+                ))
+            }
         })
     }
 
@@ -91,7 +119,9 @@ impl<'a> TCPMemory<'a> {
         )
         .await?;
 
-        let value = ReceiveReadI64PacketResponse::deserialize(&response).unwrap().value;
+        let value = ReceiveReadI64PacketResponse::deserialize(&response)
+            .unwrap()
+            .value;
 
         // Construct IResult based on width_bytes
         Ok(match width_bytes {
@@ -99,7 +129,12 @@ impl<'a> TCPMemory<'a> {
             2 => IResult { i16: value as i16 },
             4 => IResult { i32: value as i32 },
             8 => IResult { i64: value },
-            _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported byte width")),
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Unsupported byte width",
+                ))
+            }
         })
     }
 
@@ -143,7 +178,11 @@ impl<'a> TCPMemory<'a> {
         unsafe { Ok(r.i64) }
     }
 
-    pub async fn read_string(&mut self, address: u64, maxlen: u32) -> io::Result<Result<String, FromUtf8Error>> {
+    pub async fn read_string(
+        &mut self,
+        address: u64,
+        maxlen: u32,
+    ) -> io::Result<Result<String, FromUtf8Error>> {
         // convert little endian utf8 bytes to string
         let bytes = self.read_vec(address, maxlen).await?;
         Ok(String::from_utf8(bytes))
@@ -161,15 +200,13 @@ impl<'a> TCPMemory<'a> {
     //     self.read::<f64>(address).await
     // }
 
-
     pub async fn read_ptr(&mut self, address: u64) -> io::Result<Option<u64>> {
         let r = self.read_u64(address).await?;
         if r == 0 {
-            return Ok(None)
+            return Ok(None);
         }
         Ok(Some(r))
     }
-
 
     pub async fn write(&mut self, address: u64, data: Vec<u8>) -> io::Result<u64> {
         let response = send_packet(
@@ -177,6 +214,8 @@ impl<'a> TCPMemory<'a> {
             RequestWriteVecMemoryPacket::serialize(address, data),
         )
         .await?;
-        Ok(RequestWriteVecMemoryPacketResponse::deserialize(&response).unwrap().bytes_written)
+        Ok(RequestWriteVecMemoryPacketResponse::deserialize(&response)
+            .unwrap()
+            .bytes_written)
     }
 }
